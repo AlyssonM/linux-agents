@@ -100,7 +100,7 @@
   <!-- Dark background -->
   <rect width="800" height="600" fill="#0d1117" rx="0" ry="0"/>
 
-  <!-- Desktop outline (rounded rect simulating macOS window) -->
+  <!-- Desktop outline (rounded rect simulating Linux desktop window) -->
   <g class="desktop-outline">
     <!-- Outer desktop frame -->
     <rect x="40" y="60" width="720" height="500" rx="12" ry="12"
