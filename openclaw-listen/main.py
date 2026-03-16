@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 import signal
 import subprocess
@@ -11,7 +12,7 @@ from uuid import uuid4
 
 import yaml
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 app = FastAPI(title="openclaw-listen")
@@ -49,7 +50,7 @@ class Execution(BaseModel):
 
 
 class JobRequest(BaseModel):
-    instruction: str
+    instruction: str = Field(min_length=1, max_length=16000)
     source: Source = Field(default_factory=Source)
     delivery: Delivery = Field(default_factory=Delivery)
     execution: Execution = Field(default_factory=Execution)
@@ -104,19 +105,28 @@ def create_job(req: JobRequest):
     _write_job(job_file, data)
 
     worker_path = BASE_DIR / "worker.py"
-    proc = subprocess.Popen(
-        [sys.executable, str(worker_path), job_id],
-        cwd=str(BASE_DIR),
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    try:
+        proc = subprocess.Popen(
+            [sys.executable, str(worker_path), job_id],
+            cwd=str(BASE_DIR),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except OSError as exc:
+        data["status"] = "failed"
+        data["updated_at"] = _now()
+        data["error"] = {"message": str(exc)}
+        data["updates"].append("Failed to spawn worker")
+        _write_job(job_file, data)
+        raise HTTPException(status_code=500, detail="Failed to start worker process") from exc
+
     data = _read_job(job_file)
     data["runtime"]["pid"] = proc.pid
     data["status"] = "planning"
     data["updated_at"] = _now()
     data["updates"].append("Job accepted and worker spawned")
     _write_job(job_file, data)
-    return {"job_id": job_id, "status": data["status"]}
+    return JSONResponse({"id": job_id, "job_id": job_id, "status": data["status"], "status_url": f"/jobs/{job_id}"}, status_code=202)
 
 
 @app.get("/jobs/{job_id}", response_class=PlainTextResponse)
@@ -128,23 +138,28 @@ def get_job(job_id: str):
 
 
 @app.get("/jobs", response_class=PlainTextResponse)
-def list_jobs(archived: bool = False):
+def list_jobs(archived: bool = False, status: str | None = None, source_type: str | None = None):
     search_dir = ARCHIVED_DIR if archived else JOBS_DIR
+    search_dir.mkdir(exist_ok=True)
     jobs = []
     for f in sorted(search_dir.glob("*.yaml")):
         data = _read_job(f)
-        jobs.append(
-            {
-                "id": data.get("id"),
-                "status": data.get("status"),
-                "instruction": data.get("instruction"),
-                "source_type": (data.get("source") or {}).get("type"),
-                "strategy": ((data.get("execution") or {}).get("resolved_strategy")),
-                "created_at": data.get("created_at"),
-                "updated_at": data.get("updated_at"),
-            }
-        )
-    return yaml.dump({"jobs": jobs}, default_flow_style=False, sort_keys=False)
+        row = {
+            "id": data.get("id"),
+            "status": data.get("status"),
+            "instruction": data.get("instruction"),
+            "source_type": (data.get("source") or {}).get("type"),
+            "strategy": ((data.get("execution") or {}).get("resolved_strategy")),
+            "created_at": data.get("created_at"),
+            "updated_at": data.get("updated_at"),
+        }
+        if status and row["status"] != status:
+            continue
+        if source_type and row["source_type"] != source_type:
+            continue
+        jobs.append(row)
+    jobs_sorted = sorted(jobs, key=lambda j: j.get("created_at", ""), reverse=True)
+    return yaml.dump({"jobs": jobs_sorted}, default_flow_style=False, sort_keys=False)
 
 
 @app.post("/jobs/clear")
@@ -166,9 +181,10 @@ def cancel_job(job_id: str):
     pid = (data.get("runtime") or {}).get("pid")
     if pid:
         try:
-            subprocess.run(["kill", str(pid)], capture_output=True, text=True, check=False)
-        except Exception:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
             pass
+
     data["status"] = "cancelled"
     data["updated_at"] = _now()
     data.setdefault("updates", []).append("Cancellation requested")

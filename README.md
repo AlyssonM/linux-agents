@@ -45,12 +45,17 @@ linux-agents gives AI agents practical control over a Linux device:
 - **rpi-job** — FastAPI job server for async execution
 - **rpi-client** — CLI client for dispatch and monitoring
 
+On top of that, the repo also includes two agent-oriented job layers:
+
+- **listen + direct** — Codex-native async job flow
+- **openclaw-listen** — OpenClaw-native async orchestration flow
+
 This stack was validated on a **Raspberry Pi 4 (ARM64)** with a dual display strategy:
 
 - **DISPLAY=:1 (X11 via tightvnc)** → full automation: type, click, screenshot, OCR
 - **DISPLAY=:0 (Wayland)** → monitoring/screenshots only
 
-Two control layers. Four CLIs. Linux-native agent autonomy.
+Two control layers, four core CLIs, and complementary async agent runtimes. Linux-native agent autonomy.
 
 ---
 
@@ -385,47 +390,3 @@ This is not a copy. It is a Linux-native reinterpretation of the same core idea:
 Inspired by the architecture and presentation patterns of Mac Mini Agent by [@disler](https://github.com/disler).
 
 Implementation, Linux adaptation, Raspberry Pi validation, and job-oriented workflow design by this project.
-ithub.com/disler).
-
-Implementation, Linux adaptation, Raspberry Pi validation, and job-oriented workflow design by this project.
-PPLIED.md](FIXES-APPLIED.md)** — bug fixes applied
-- **[LOW-PRIORITY-ISSUES.md](LOW-PRIORITY-ISSUES.md)** — known limitations
-- **[.claude/STRUCTURE.md](.claude/STRUCTURE.md)** — Claude agent structure
-- **[.codex/STRUCTURE.md](.codex/STRUCTURE.md)** — Codex agent structure
-
----
-
-## Custom Agent Support
-
-These tools are **agent-agnostic** and can be used by:
-
-- Claude Code
-- Codex
-- Gemini
-- OpenCode
-- custom agents
-- any system that can invoke shell commands
-
-The model does not matter. The control surface does.
-
----
-
-## Releitura do Mac Mini Agent
-
-linux-agents is explicitly inspired by **[disler/mac-mini-agent](https://github.com/disler/mac-mini-agent)** — but adapted to a very different target:
-
-- **macOS → Linux ARM64**
-- **Swift/AppKit/Vision → Python/pyatspi/xdotool/Tesseract**
-- **single-device Mac workflows → Raspberry Pi remote worker workflows**
-- **desktop-first Mac automation → dual-session Linux automation (`:0` + `:1`)**
-
-This is not a copy. It is a Linux-native reinterpretation of the same core idea: give AI agents the ability to actually operate a real machine.
-
----
-
-## License / Attribution
-
-Inspired by the architecture and presentation patterns of Mac Mini Agent by [@disler](https://github.com/disler).
-
-Implementation, Linux adaptation, Raspberry Pi validation, and job-oriented workflow design by this project.
-gn by this project.

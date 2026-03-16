@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import signal
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -10,6 +11,8 @@ import yaml
 
 BASE_DIR = Path(__file__).parent
 JOBS_DIR = BASE_DIR / "jobs"
+_CURRENT_PROC: subprocess.Popen[str] | None = None
+_CANCEL_REQUESTED = False
 
 
 def _now() -> str:
@@ -27,6 +30,17 @@ def _write_job(path: Path, data: dict) -> None:
 def _append_update(data: dict, text: str) -> None:
     data.setdefault("updates", []).append(text)
     data["updated_at"] = _now()
+
+
+def _handle_signal(signum: int, _frame) -> None:
+    global _CANCEL_REQUESTED
+    _CANCEL_REQUESTED = True
+    if _CURRENT_PROC and _CURRENT_PROC.poll() is None:
+        _CURRENT_PROC.terminate()
+
+
+for _sig in (signal.SIGTERM, signal.SIGINT):
+    signal.signal(_sig, _handle_signal)
 
 
 def _build_openclaw_cmd(job: dict) -> list[str]:
@@ -69,13 +83,14 @@ def _extract_result(stdout: str) -> tuple[str, str]:
                 if "output" in payload and isinstance(payload["output"], str):
                     msg = payload["output"].strip()
                     return msg[:4000], msg
-            
         except json.JSONDecodeError:
             continue
     return text[:4000], text
 
 
 def main(job_id: str) -> None:
+    global _CURRENT_PROC
+
     job_file = JOBS_DIR / f"{job_id}.yaml"
     if not job_file.exists():
         raise SystemExit(f"Job not found: {job_file}")
@@ -98,23 +113,29 @@ def main(job_id: str) -> None:
     _append_update(job, "Dispatching job to local OpenClaw runtime")
     _write_job(job_file, job)
 
-    proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    _CURRENT_PROC = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    stdout, stderr = _CURRENT_PROC.communicate()
+    returncode = _CURRENT_PROC.returncode
 
     job = _read_job(job_file)
-    summary, full_message = _extract_result(proc.stdout)
+    summary, full_message = _extract_result(stdout)
     job.setdefault("result", {})
     job["result"]["summary"] = summary
     job["result"]["message"] = full_message
-    job["result"]["exit_code"] = proc.returncode
-    if proc.stderr.strip():
-        job["result"]["stderr"] = proc.stderr.strip()[:4000]
+    job["result"]["exit_code"] = returncode
+    if stderr.strip():
+        job["result"]["stderr"] = stderr.strip()[:4000]
 
-    if proc.returncode == 0:
+    if _CANCEL_REQUESTED:
+        job["status"] = "cancelled"
+        job["error"] = None
+        _append_update(job, "Cancellation requested")
+    elif returncode == 0:
         job["status"] = "succeeded"
         _append_update(job, "OpenClaw runtime completed successfully")
     else:
         job["status"] = "failed"
-        job["error"] = {"message": proc.stderr.strip() or f"openclaw agent exited with code {proc.returncode}"}
+        job["error"] = {"message": stderr.strip() or f"openclaw agent exited with code {returncode}"}
         _append_update(job, "OpenClaw runtime failed")
 
     job["updated_at"] = _now()
