@@ -94,7 +94,10 @@ def main(job_id: str, prompt: str) -> None:
     start_time = time.time()
     data = _read_yaml(job_file)
     data["session"] = session_name
-    data.setdefault("updates", []).append("Spawned Codex worker in tmux session")
+    if model:
+        data.setdefault("updates", []).append(f"Spawned Codex worker in tmux session using model: {model}")
+    else:
+        data.setdefault("updates", []).append("Spawned Codex worker in tmux session using default Codex model")
     _write_yaml(job_file, data)
 
     exit_code = 1

@@ -40,11 +40,14 @@ def _request_text(method: str, url: str, **kwargs) -> str:
         raise ClientError(f"Request failed: {exc}") from exc
 
 
-def start_job(url: str, prompt: str) -> dict:
+def start_job(url: str, prompt: str, model: str | None = None) -> dict:
     base = _validate_url(url)
     if not prompt.strip():
         raise ClientError("Prompt cannot be empty or whitespace-only")
-    return _request_json("POST", f"{base}/job", json={"prompt": prompt})
+    payload = {"prompt": prompt}
+    if model:
+        payload["model"] = model
+    return _request_json("POST", f"{base}/job", json=payload)
 
 
 def get_job(url: str, job_id: str) -> str:

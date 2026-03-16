@@ -13,9 +13,10 @@ def cli() -> None:
 @cli.command()
 @click.argument("url")
 @click.argument("prompt")
-def start(url: str, prompt: str) -> None:
+@click.option("--model", default=None, help="Optional Codex model override for this job.")
+def start(url: str, prompt: str, model: str | None) -> None:
     """Start a new Codex agent job."""
-    result = client.start_job(url, prompt)
+    result = client.start_job(url, prompt, model=model)
     click.echo(result["job_id"])
 
 

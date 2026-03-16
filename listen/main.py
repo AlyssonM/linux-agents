@@ -24,6 +24,7 @@ ARCHIVED_DIR.mkdir(exist_ok=True)
 
 class JobRequest(BaseModel):
     prompt: str
+    model: str | None = None
 
 
 def _write_job(path: Path, data: dict) -> None:
