@@ -181,13 +181,13 @@ LLM interpretation can be added later as an optional layer, but the current impl
 
 ---
 
-### rpi-client — CLI Client
+### rpi-client — Generic CLI Client
 
-> CLI client for dispatching work to rpi-job.
+> CLI client for dispatching work to `rpi-job`.
 
 **Python** · Click + httpx
 
-rpi-client is the operator-facing entrypoint for sending jobs to the Raspberry Pi sandbox and retrieving results.
+rpi-client is the operator-facing entrypoint for sending generic jobs to the Raspberry Pi sandbox and retrieving results.
 
 | Command  | Purpose |
 | -------- | ------- |
@@ -343,6 +343,49 @@ linux-agents/
 - **[E2E-TEST-REPORT.md](E2E-TEST-REPORT.md)** — full test report
 - **[TESTING-VALIDATION.md](TESTING-VALIDATION.md)** — validation summary
 - **[FIXES-APPLIED.md](FIXES-APPLIED.md)** — bug fixes applied
+- **[LOW-PRIORITY-ISSUES.md](LOW-PRIORITY-ISSUES.md)** — known limitations
+- **[.claude/STRUCTURE.md](.claude/STRUCTURE.md)** — Claude agent structure
+- **[.codex/STRUCTURE.md](.codex/STRUCTURE.md)** — Codex agent structure
+
+---
+
+## Custom Agent Support
+
+These tools are **agent-agnostic** and can be used by:
+
+- Claude Code
+- Codex
+- Gemini
+- OpenCode
+- custom agents
+- any system that can invoke shell commands
+
+The model does not matter. The control surface does.
+
+---
+
+## Releitura do Mac Mini Agent
+
+linux-agents is explicitly inspired by **[disler/mac-mini-agent](https://github.com/disler/mac-mini-agent)** — but adapted to a very different target:
+
+- **macOS → Linux ARM64**
+- **Swift/AppKit/Vision → Python/pyatspi/xdotool/Tesseract**
+- **single-device Mac workflows → Raspberry Pi remote worker workflows**
+- **desktop-first Mac automation → dual-session Linux automation (`:0` + `:1`)**
+
+This is not a copy. It is a Linux-native reinterpretation of the same core idea: give AI agents the ability to actually operate a real machine.
+
+---
+
+## License / Attribution
+
+Inspired by the architecture and presentation patterns of Mac Mini Agent by [@disler](https://github.com/disler).
+
+Implementation, Linux adaptation, Raspberry Pi validation, and job-oriented workflow design by this project.
+ithub.com/disler).
+
+Implementation, Linux adaptation, Raspberry Pi validation, and job-oriented workflow design by this project.
+PPLIED.md](FIXES-APPLIED.md)** — bug fixes applied
 - **[LOW-PRIORITY-ISSUES.md](LOW-PRIORITY-ISSUES.md)** — known limitations
 - **[.claude/STRUCTURE.md](.claude/STRUCTURE.md)** — Claude agent structure
 - **[.codex/STRUCTURE.md](.codex/STRUCTURE.md)** — Codex agent structure

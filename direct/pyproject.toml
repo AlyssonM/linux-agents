@@ -1,0 +1,17 @@
+[project]
+name = "direct"
+version = "0.1.0"
+description = "CLI client for the linux-agents listen server"
+requires-python = ">=3.11"
+dependencies = [
+  "click>=8.1",
+  "httpx",
+  "pyyaml",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project.scripts]
+direct = "direct.main:cli"
