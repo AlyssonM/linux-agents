@@ -1,0 +1,30 @@
+[project]
+name = "rpi-job"
+version = "0.1.0"
+description = "Background job server for Linux ARM64 agents"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.110",
+  "uvicorn>=0.28",
+  "pyyaml>=6.0",
+  "pydantic>=2.6",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "httpx>=0.26",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["rpi_job*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+addopts = "-q"

@@ -1,0 +1,30 @@
+[project]
+name = "rpi-term"
+version = "0.1.0"
+description = "tmux-based terminal automation CLI"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "click>=8.1",
+  "psutil>=5.9",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+]
+
+[project.scripts]
+rpi-term = "rpi_term.cli:cli"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["rpi_term*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+addopts = "-q"

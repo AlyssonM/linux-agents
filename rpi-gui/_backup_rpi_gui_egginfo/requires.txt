@@ -1,0 +1,9 @@
+click>=8.1.7
+pyautogui>=0.9.54
+
+[dev]
+pytest>=8.0.0
+pytest-mock>=3.12.0
+
+[x11]
+python-xlib>=0.33

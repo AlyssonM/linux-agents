@@ -1,0 +1,36 @@
+[project]
+name = "rpi-gui"
+version = "0.1.0"
+description = "Linux ARM64 GUI automation CLI"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "click>=8.1.7",
+  "pillow>=10.4.0",
+  "pytesseract>=0.3.10",
+  "pyautogui>=0.9.54",
+]
+
+[project.optional-dependencies]
+x11 = [
+  "python-xlib>=0.33",
+]
+dev = [
+  "pytest>=8.0.0",
+  "pytest-mock>=3.12.0",
+]
+
+[project.scripts]
+rpi-gui = "rpi_gui.cli:cli"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["rpi_gui*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

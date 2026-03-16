@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+
+# Environment / local config
+.env
+.env.*
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Build / packaging
+dist/
+build/
+
+# Runtime artifacts
+*.log
+*.pid
+
+# Test artifacts generated locally
+artifacts/**/*.png
+artifacts/**/*.json
+artifacts/**/*.txt
+artifacts/**/*.yaml
+artifacts/**/*.yml
+
+# Job runtime state
+rpi-job/jobs/*.yaml
+rpi-job/jobs/archived/*.yaml
+!rpi-job/jobs/.gitkeep
+!rpi-job/jobs/archived/.gitkeep

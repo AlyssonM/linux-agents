@@ -1,0 +1,31 @@
+Metadata-Version: 2.4
+Name: rpi-gui
+Version: 0.1.0
+Summary: Linux ARM64 GUI automation CLI
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: click>=8.1.7
+Requires-Dist: pyautogui>=0.9.54
+Provides-Extra: x11
+Requires-Dist: python-xlib>=0.33; extra == "x11"
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0.0; extra == "dev"
+Requires-Dist: pytest-mock>=3.12.0; extra == "dev"
+
+# rpi-gui
+
+CLI de automação GUI para Linux ARM64 (Raspberry Pi).
+
+## Comandos Sprint 2
+
+- `rpi-gui hotkey` — atalhos de teclado
+- `rpi-gui scroll` — rolagem de tela
+- `rpi-gui drag` — arrastar e soltar
+- `rpi-gui focus` — foco de janela (xdotool)
+
+## Instalação
+
+```bash
+uv sync
+uv run rpi-gui --help
+```
