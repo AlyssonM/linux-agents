@@ -1,0 +1,14 @@
+[project]
+name = "listen"
+version = "0.1.0"
+description = "HTTP job server for Codex-driven linux-agents execution"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi",
+  "uvicorn",
+  "pyyaml",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
