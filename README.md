@@ -326,8 +326,11 @@ linux-agents/
 ├── assets/              # Animated SVGs and diagrams
 ├── rpi-gui/             # GUI automation CLI
 ├── rpi-term/            # tmux terminal automation CLI
-├── rpi-job/             # FastAPI job server
-├── rpi-client/          # CLI client for rpi-job
+├── rpi-job/             # Generic FastAPI job server
+├── rpi-client/          # Generic CLI client for rpi-job
+├── listen/              # Codex-native agent job server
+├── direct/              # Codex-native CLI client for listen
+├── openclaw-listen/     # OpenClaw-native async job listener
 ├── specs/               # E2E specifications
 ├── artifacts/           # Test outputs
 ├── .claude/             # Claude-oriented agent scaffolding
@@ -425,3 +428,4 @@ This is not a copy. It is a Linux-native reinterpretation of the same core idea:
 Inspired by the architecture and presentation patterns of Mac Mini Agent by [@disler](https://github.com/disler).
 
 Implementation, Linux adaptation, Raspberry Pi validation, and job-oriented workflow design by this project.
+gn by this project.
