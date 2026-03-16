@@ -1,0 +1,18 @@
+[project]
+name = "openclaw-listen"
+version = "0.1.0"
+description = "OpenClaw-native async job listener for linux-agents"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi",
+  "uvicorn",
+  "pyyaml",
+  "pydantic>=2",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["main", "worker"]
