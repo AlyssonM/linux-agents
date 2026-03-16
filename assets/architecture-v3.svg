@@ -23,8 +23,8 @@
   <!-- ================================================================ -->
   <!-- TITLE                                                             -->
   <!-- ================================================================ -->
-  <text x="900" y="55" text-anchor="middle" fill="#f0f6fc" font-size="32" font-weight="700" letter-spacing="1">Steer Architecture</text>
-  <text x="900" y="88" text-anchor="middle" fill="#8b949e" font-size="16" font-weight="500" letter-spacing="3">ARCHITECTURE FOR macOS AI AGENTS</text>
+  <text x="900" y="55" text-anchor="middle" fill="#f0f6fc" font-size="32" font-weight="700" letter-spacing="1">linux-agents Architecture</text>
+  <text x="900" y="88" text-anchor="middle" fill="#8b949e" font-size="16" font-weight="500" letter-spacing="3">ARCHITECTURE FOR DEBIAN LINUX AI AGENTS</text>
 
   <!-- ================================================================ -->
   <!-- ROW 1: TRIGGER LAYER                                              -->
@@ -44,10 +44,10 @@
   <text x="470" y="250" text-anchor="middle" fill="#d29922" font-size="14" font-weight="600" letter-spacing="1.5">ENGINEER</text>
   <text x="470" y="278" text-anchor="middle" fill="#f0f6fc" font-size="22" font-weight="700">Build</text>
 
-  <!-- Direct -->
+  <!-- rpi-client -->
   <rect x="620" y="210" width="220" height="90" rx="14" fill="#141c28" stroke="#d29922" stroke-width="3"/>
   <text x="730" y="250" text-anchor="middle" fill="#d29922" font-size="14" font-weight="600" letter-spacing="1.5">CLI CLIENT</text>
-  <text x="730" y="278" text-anchor="middle" fill="#f0f6fc" font-size="22" font-weight="700">Direct</text>
+  <text x="730" y="278" text-anchor="middle" fill="#f0f6fc" font-size="22" font-weight="700">rpi-client</text>
 
   <!-- Agent -->
   <rect x="880" y="210" width="220" height="90" rx="14" fill="#141c28" stroke="#d29922" stroke-width="3"/>
@@ -55,7 +55,7 @@
   <text x="990" y="278" text-anchor="middle" fill="#f0f6fc" font-size="22" font-weight="700">Agent</text>
 
   <!-- ================================================================ -->
-  <!-- ARROWS: Trigger → Listen                                          -->
+  <!-- ARROWS: Trigger → rpi-job                                          -->
   <!-- ================================================================ -->
   <line x1="210" y1="300" x2="300" y2="366" stroke="#d29922" stroke-width="2" marker-end="url(#arrowOrange)"/>
   <line x1="470" y1="300" x2="430" y2="366" stroke="#d29922" stroke-width="2" marker-end="url(#arrowOrange)"/>
@@ -63,36 +63,36 @@
   <line x1="990" y1="300" x2="830" y2="366" stroke="#d29922" stroke-width="2" marker-end="url(#arrowOrange)"/>
 
   <!-- ================================================================ -->
-  <!-- ROW 2: JOB DISPATCH LAYER — Listen                                -->
+  <!-- ROW 2: JOB DISPATCH LAYER — rpi-job                                -->
   <!-- ================================================================ -->
 
   <!-- Layer label -->
   <text x="100" y="338" fill="#f78166" font-size="14" font-weight="600" letter-spacing="2">JOB DISPATCH LAYER</text>
   <line x1="100" y1="350" x2="1100" y2="350" stroke="#f78166" stroke-width="1" opacity="0.3"/>
 
-  <!-- Listen box -->
+  <!-- rpi-job box -->
   <rect x="200" y="370" width="720" height="100" rx="16" fill="#1c1814" stroke="#f78166" stroke-width="3"/>
   <text x="560" y="403" text-anchor="middle" fill="#f78166" font-size="14" font-weight="600" letter-spacing="2">JOB SERVER</text>
-  <text x="560" y="436" text-anchor="middle" fill="#f0f6fc" font-size="28" font-weight="700">Listen</text>
+  <text x="560" y="436" text-anchor="middle" fill="#f0f6fc" font-size="28" font-weight="700">rpi-job</text>
   <text x="560" y="460" text-anchor="middle" fill="#c9d1d9" font-size="14" font-weight="400">FastAPI · Workers · YAML Jobs</text>
 
   <!-- ================================================================ -->
-  <!-- ARROW: Listen → Agent Sandbox                                     -->
+  <!-- ARROW: rpi-job → Agent Sandbox                                     -->
   <!-- ================================================================ -->
   <line x1="560" y1="470" x2="560" y2="554" stroke="#f78166" stroke-width="2" marker-end="url(#arrowCoral)"/>
 
   <!-- ================================================================ -->
-  <!-- macOS AGENT SANDBOX                                               -->
+  <!-- LINUX AGENT SANDBOX                                               -->
   <!-- ================================================================ -->
   <rect x="80" y="490" width="1100" height="740" rx="20" fill="none" stroke="#3fb950" stroke-width="3" stroke-dasharray="12,6" opacity="0.6"/>
   <rect x="80" y="475" width="370" height="32" rx="8" fill="#0d1117"/>
   <svg x="86" y="476" width="26" height="30" viewBox="0 0 384 512">
     <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5c0 26.2 4.8 53.3 14.4 81.2 12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-62.1 24.1-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.4-34.3z" fill="#f0f6fc"/>
   </svg>
-  <text x="118" y="497" fill="#3fb950" font-size="18" font-weight="700" letter-spacing="2">macOS AGENT SANDBOX</text>
+  <text x="118" y="497" fill="#3fb950" font-size="18" font-weight="700" letter-spacing="2">LINUX AGENT SANDBOX</text>
 
   <!-- ================================================================ -->
-  <!-- ROW 3: ORCHESTRATION LAYER — Drive / Steer                        -->
+  <!-- ROW 3: ORCHESTRATION LAYER — rpi-term / rpi-gui                        -->
   <!-- ================================================================ -->
 
   <!-- Layer label -->
@@ -104,16 +104,16 @@
   <rect x="120" y="543" width="140" height="28" rx="6" fill="#0d1117"/>
   <text x="140" y="563" fill="#bc8cff" font-size="14" font-weight="600" letter-spacing="1.5">AI AGENT</text>
 
-  <!-- Drive app box (terminal control) -->
+  <!-- rpi-term app box (terminal control) -->
   <rect x="140" y="572" width="380" height="120" rx="16" fill="#15202e" stroke="#58a6ff" stroke-width="3"/>
   <text x="330" y="610" text-anchor="middle" fill="#58a6ff" font-size="14" font-weight="600" letter-spacing="2">TERMINAL CONTROL</text>
-  <text x="330" y="644" text-anchor="middle" fill="#f0f6fc" font-size="28" font-weight="700">Drive</text>
+  <text x="330" y="644" text-anchor="middle" fill="#f0f6fc" font-size="28" font-weight="700">rpi-term</text>
   <text x="330" y="672" text-anchor="middle" fill="#c9d1d9" font-size="14" font-weight="400">session · run · send · logs · poll · fanout</text>
 
-  <!-- Steer app box (GUI control) -->
+  <!-- rpi-gui app box (GUI control) -->
   <rect x="600" y="572" width="380" height="120" rx="16" fill="#15202e" stroke="#79c0ff" stroke-width="3"/>
   <text x="790" y="610" text-anchor="middle" fill="#79c0ff" font-size="14" font-weight="600" letter-spacing="2">GUI CONTROL</text>
-  <text x="790" y="644" text-anchor="middle" fill="#f0f6fc" font-size="28" font-weight="700">Steer</text>
+  <text x="790" y="644" text-anchor="middle" fill="#f0f6fc" font-size="28" font-weight="700">rpi-gui</text>
   <text x="790" y="672" text-anchor="middle" fill="#c9d1d9" font-size="14" font-weight="400">see · click · type · ocr · scroll · drag</text>
 
   <!-- ================================================================ -->
@@ -138,9 +138,9 @@
 
   <!-- GUI box -->
   <rect x="600" y="810" width="380" height="140" rx="16" fill="#141f28" stroke="#79c0ff" stroke-width="3"/>
-  <text x="790" y="850" text-anchor="middle" fill="#79c0ff" font-size="14" font-weight="600" letter-spacing="2">macOS GUI</text>
+  <text x="790" y="850" text-anchor="middle" fill="#79c0ff" font-size="14" font-weight="600" letter-spacing="2">X11 GUI</text>
   <text x="790" y="886" text-anchor="middle" fill="#f0f6fc" font-size="20" font-weight="600">Accessibility + OCR</text>
-  <text x="790" y="916" text-anchor="middle" fill="#c9d1d9" font-size="16" font-weight="400">Vision · AX Tree · CGEvent</text>
+  <text x="790" y="916" text-anchor="middle" fill="#c9d1d9" font-size="16" font-weight="400">Tesseract · AT-SPI · xdotool</text>
 
   <!-- ================================================================ -->
   <!-- ARROWS: Execution → Host Apps                                     -->
@@ -162,16 +162,16 @@
 
   <!-- App grid -->
   <rect x="305" y="1120" width="80" height="55" rx="10" fill="#21262d" stroke="#30363d" stroke-width="2"/>
-  <text x="345" y="1154" text-anchor="middle" fill="#f0f6fc" font-size="14" font-weight="500">Safari</text>
+  <text x="345" y="1154" text-anchor="middle" fill="#f0f6fc" font-size="14" font-weight="500">Chromium</text>
 
   <rect x="400" y="1120" width="80" height="55" rx="10" fill="#21262d" stroke="#30363d" stroke-width="2"/>
-  <text x="440" y="1154" text-anchor="middle" fill="#f0f6fc" font-size="14" font-weight="500">Finder</text>
+  <text x="440" y="1154" text-anchor="middle" fill="#f0f6fc" font-size="14" font-weight="500">PCManFM</text>
 
   <rect x="495" y="1120" width="80" height="55" rx="10" fill="#21262d" stroke="#30363d" stroke-width="2"/>
-  <text x="535" y="1154" text-anchor="middle" fill="#f0f6fc" font-size="14" font-weight="500">Notes</text>
+  <text x="535" y="1154" text-anchor="middle" fill="#f0f6fc" font-size="14" font-weight="500">Mousepad</text>
 
   <rect x="590" y="1120" width="80" height="55" rx="10" fill="#21262d" stroke="#30363d" stroke-width="2"/>
-  <text x="630" y="1154" text-anchor="middle" fill="#f0f6fc" font-size="14" font-weight="500">Mail</text>
+  <text x="630" y="1154" text-anchor="middle" fill="#f0f6fc" font-size="14" font-weight="500">XTerm</text>
 
   <rect x="685" y="1120" width="80" height="55" rx="10" fill="#21262d" stroke="#30363d" stroke-width="2"/>
   <text x="725" y="1154" text-anchor="middle" fill="#f0f6fc" font-size="14" font-weight="500">VS Code</text>

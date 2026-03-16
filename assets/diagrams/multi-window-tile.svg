@@ -114,9 +114,9 @@
     <circle cx="98" cy="76" r="5" fill="#3fb950" opacity="0.8"/>
   </g>
 
-  <!-- macOS Agent label at top center -->
+  <!-- Linux Agent label at top center -->
   <text class="title-label" x="400" y="81" text-anchor="middle"
-        fill="#8b949e" font-size="13" font-weight="500">macOS Agent</text>
+        fill="#8b949e" font-size="13" font-weight="500">Linux Agent</text>
 
   <!-- ============================================ -->
   <!-- QUADRANT: Browser (top-left) - Blue #58a6ff  -->

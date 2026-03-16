@@ -294,7 +294,7 @@
 
   <!-- Bottom label -->
   <text x="450" y="492" text-anchor="middle" fill="#484f58" font-size="10" opacity="0">
-    steer ocr --store injects screen-read text into the accessibility tree via macOS AX APIs
+    rpi-gui ocr --store injects screen-read text through OCR and AT-SPI on Linux
     <animate attributeName="opacity" from="0" to="0.7" begin="3s" dur="1s" fill="freeze"/>
   </text>
 </svg>

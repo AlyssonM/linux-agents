@@ -27,8 +27,8 @@
   <!-- TITLE — 0.0s -->
   <g opacity="0">
     <animate attributeName="opacity" from="0" to="1" begin="0.0s" dur="0.6s" fill="freeze"/>
-    <text x="900" y="55" text-anchor="middle" fill="#f0f6fc" font-size="32" font-weight="700" letter-spacing="1">Steer Architecture</text>
-    <text x="900" y="88" text-anchor="middle" fill="#8b949e" font-size="16" font-weight="500" letter-spacing="3">ARCHITECTURE FOR macOS AI AGENTS</text>
+    <text x="900" y="55" text-anchor="middle" fill="#f0f6fc" font-size="32" font-weight="700" letter-spacing="1">linux-agents Architecture</text>
+    <text x="900" y="88" text-anchor="middle" fill="#8b949e" font-size="16" font-weight="500" letter-spacing="3">ARCHITECTURE FOR DEBIAN LINUX AI AGENTS</text>
   </g>
 
   <!-- TRIGGER LAYER label — 1.0s -->
@@ -58,14 +58,14 @@
     <text x="470" y="278" text-anchor="middle" fill="#f0f6fc" font-size="22" font-weight="700">Build</text>
   </g>
 
-  <!-- Direct — 2.5s -->
+  <!-- rpi-client — 2.5s -->
   <g opacity="0">
     <animate attributeName="opacity" from="0" to="1" begin="2.5s" dur="0.5s" fill="freeze"/>
     <rect x="620" y="210" width="220" height="90" rx="14" fill="#141c28" stroke="#d29922" stroke-width="3">
       <animate attributeName="stroke-opacity" values="1;0.5;1" begin="10.6s" dur="2.5s" repeatCount="indefinite"/>
     </rect>
     <text x="730" y="250" text-anchor="middle" fill="#d29922" font-size="14" font-weight="600" letter-spacing="1.5">CLI CLIENT</text>
-    <text x="730" y="278" text-anchor="middle" fill="#f0f6fc" font-size="22" font-weight="700">Direct</text>
+    <text x="730" y="278" text-anchor="middle" fill="#f0f6fc" font-size="22" font-weight="700">rpi-client</text>
   </g>
 
   <!-- Agent — 3.0s -->
@@ -78,7 +78,7 @@
     <text x="990" y="278" text-anchor="middle" fill="#f0f6fc" font-size="22" font-weight="700">Agent</text>
   </g>
 
-  <!-- Trigger → Listen arrows — 3.5s -->
+  <!-- Trigger → rpi-job arrows — 3.5s -->
   <g opacity="0">
     <animate attributeName="opacity" from="0" to="1" begin="3.5s" dur="0.6s" fill="freeze"/>
     <line x1="210" y1="300" x2="300" y2="366" stroke="#d29922" stroke-width="2" marker-end="url(#arrowOrange)">
@@ -102,18 +102,18 @@
     <line x1="100" y1="350" x2="1100" y2="350" stroke="#f78166" stroke-width="1" opacity="0.3"/>
   </g>
 
-  <!-- Listen box — 4.5s -->
+  <!-- rpi-job box — 4.5s -->
   <g opacity="0">
     <animate attributeName="opacity" from="0" to="1" begin="4.5s" dur="0.5s" fill="freeze"/>
     <rect x="200" y="370" width="720" height="100" rx="16" fill="#1c1814" stroke="#f78166" stroke-width="3">
       <animate attributeName="stroke-opacity" values="1;0.4;1" begin="10s" dur="3s" repeatCount="indefinite"/>
     </rect>
     <text x="560" y="403" text-anchor="middle" fill="#f78166" font-size="14" font-weight="600" letter-spacing="2">JOB SERVER</text>
-    <text x="560" y="436" text-anchor="middle" fill="#f0f6fc" font-size="28" font-weight="700">Listen</text>
+    <text x="560" y="436" text-anchor="middle" fill="#f0f6fc" font-size="28" font-weight="700">rpi-job</text>
     <text x="560" y="460" text-anchor="middle" fill="#c9d1d9" font-size="14" font-weight="400">FastAPI · Workers · YAML Jobs</text>
   </g>
 
-  <!-- Listen → Sandbox arrow — 5.0s -->
+  <!-- rpi-job → Sandbox arrow — 5.0s -->
   <g opacity="0">
     <animate attributeName="opacity" from="0" to="1" begin="5.0s" dur="0.5s" fill="freeze"/>
     <line x1="560" y1="470" x2="560" y2="554" stroke="#f78166" stroke-width="2" marker-end="url(#arrowCoral)">
@@ -121,7 +121,7 @@
     </line>
   </g>
 
-  <!-- macOS AGENT SANDBOX — 5.5s -->
+  <!-- LINUX AGENT SANDBOX — 5.5s -->
   <g opacity="0">
     <animate attributeName="opacity" from="0" to="1" begin="5.5s" dur="0.6s" fill="freeze"/>
     <rect x="80" y="490" width="1100" height="740" rx="20" fill="none" stroke="#3fb950" stroke-width="3" stroke-dasharray="12,6" opacity="0.6">
@@ -131,7 +131,7 @@
     <svg x="86" y="476" width="26" height="30" viewBox="0 0 384 512">
       <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5c0 26.2 4.8 53.3 14.4 81.2 12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-62.1 24.1-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.4-34.3z" fill="#f0f6fc"/>
     </svg>
-    <text x="118" y="497" fill="#3fb950" font-size="18" font-weight="700" letter-spacing="2">macOS AGENT SANDBOX</text>
+    <text x="118" y="497" fill="#3fb950" font-size="18" font-weight="700" letter-spacing="2">LINUX AGENT SANDBOX</text>
   </g>
 
   <!-- ORCHESTRATION LAYER label — 6.0s -->
@@ -151,25 +151,25 @@
     <text x="140" y="563" fill="#bc8cff" font-size="14" font-weight="600" letter-spacing="1.5">AI AGENT</text>
   </g>
 
-  <!-- Drive — 7.0s -->
+  <!-- rpi-term — 7.0s -->
   <g opacity="0">
     <animate attributeName="opacity" from="0" to="1" begin="7.0s" dur="0.5s" fill="freeze"/>
     <rect x="140" y="572" width="380" height="120" rx="16" fill="#15202e" stroke="#58a6ff" stroke-width="3">
       <animate attributeName="stroke-opacity" values="1;0.4;1" begin="10s" dur="3s" repeatCount="indefinite"/>
     </rect>
     <text x="330" y="610" text-anchor="middle" fill="#58a6ff" font-size="14" font-weight="600" letter-spacing="2">TERMINAL CONTROL</text>
-    <text x="330" y="644" text-anchor="middle" fill="#f0f6fc" font-size="28" font-weight="700">Drive</text>
+    <text x="330" y="644" text-anchor="middle" fill="#f0f6fc" font-size="28" font-weight="700">rpi-term</text>
     <text x="330" y="672" text-anchor="middle" fill="#c9d1d9" font-size="14" font-weight="400">session · run · send · logs · poll · fanout</text>
   </g>
 
-  <!-- Steer — 7.5s -->
+  <!-- rpi-gui — 7.5s -->
   <g opacity="0">
     <animate attributeName="opacity" from="0" to="1" begin="7.5s" dur="0.5s" fill="freeze"/>
     <rect x="600" y="572" width="380" height="120" rx="16" fill="#15202e" stroke="#79c0ff" stroke-width="3">
       <animate attributeName="stroke-opacity" values="1;0.4;1" begin="10.5s" dur="3s" repeatCount="indefinite"/>
     </rect>
     <text x="790" y="610" text-anchor="middle" fill="#79c0ff" font-size="14" font-weight="600" letter-spacing="2">GUI CONTROL</text>
-    <text x="790" y="644" text-anchor="middle" fill="#f0f6fc" font-size="28" font-weight="700">Steer</text>
+    <text x="790" y="644" text-anchor="middle" fill="#f0f6fc" font-size="28" font-weight="700">rpi-gui</text>
     <text x="790" y="672" text-anchor="middle" fill="#c9d1d9" font-size="14" font-weight="400">see · click · type · ocr · scroll · drag</text>
   </g>
 
@@ -202,9 +202,9 @@
     <rect x="600" y="810" width="380" height="140" rx="16" fill="#141f28" stroke="#79c0ff" stroke-width="3">
       <animate attributeName="stroke-opacity" values="1;0.4;1" begin="11.5s" dur="3s" repeatCount="indefinite"/>
     </rect>
-    <text x="790" y="850" text-anchor="middle" fill="#79c0ff" font-size="14" font-weight="600" letter-spacing="2">macOS GUI</text>
+    <text x="790" y="850" text-anchor="middle" fill="#79c0ff" font-size="14" font-weight="600" letter-spacing="2">X11 GUI</text>
     <text x="790" y="886" text-anchor="middle" fill="#f0f6fc" font-size="20" font-weight="600">Accessibility + OCR</text>
-    <text x="790" y="916" text-anchor="middle" fill="#c9d1d9" font-size="16" font-weight="400">Vision · AX Tree · CGEvent</text>
+    <text x="790" y="916" text-anchor="middle" fill="#c9d1d9" font-size="16" font-weight="400">Tesseract · AT-SPI · xdotool</text>
   </g>
 
   <!-- Exec → Host Apps arrows + Host Apps — 9.0s -->
@@ -226,13 +226,13 @@
     <rect x="280" y="1070" width="560" height="130" rx="16" fill="#161b22" stroke="#30363d" stroke-width="3"/>
     <text x="560" y="1105" text-anchor="middle" fill="#f0f6fc" font-size="16" font-weight="600" letter-spacing="2">CLI HOST APPS</text>
     <rect x="305" y="1120" width="80" height="55" rx="10" fill="#21262d" stroke="#30363d" stroke-width="2"/>
-    <text x="345" y="1154" text-anchor="middle" fill="#f0f6fc" font-size="14" font-weight="500">Safari</text>
+    <text x="345" y="1154" text-anchor="middle" fill="#f0f6fc" font-size="14" font-weight="500">Chromium</text>
     <rect x="400" y="1120" width="80" height="55" rx="10" fill="#21262d" stroke="#30363d" stroke-width="2"/>
-    <text x="440" y="1154" text-anchor="middle" fill="#f0f6fc" font-size="14" font-weight="500">Finder</text>
+    <text x="440" y="1154" text-anchor="middle" fill="#f0f6fc" font-size="14" font-weight="500">PCManFM</text>
     <rect x="495" y="1120" width="80" height="55" rx="10" fill="#21262d" stroke="#30363d" stroke-width="2"/>
-    <text x="535" y="1154" text-anchor="middle" fill="#f0f6fc" font-size="14" font-weight="500">Notes</text>
+    <text x="535" y="1154" text-anchor="middle" fill="#f0f6fc" font-size="14" font-weight="500">Mousepad</text>
     <rect x="590" y="1120" width="80" height="55" rx="10" fill="#21262d" stroke="#30363d" stroke-width="2"/>
-    <text x="630" y="1154" text-anchor="middle" fill="#f0f6fc" font-size="14" font-weight="500">Mail</text>
+    <text x="630" y="1154" text-anchor="middle" fill="#f0f6fc" font-size="14" font-weight="500">XTerm</text>
     <rect x="685" y="1120" width="80" height="55" rx="10" fill="#21262d" stroke="#30363d" stroke-width="2"/>
     <text x="725" y="1154" text-anchor="middle" fill="#f0f6fc" font-size="14" font-weight="500">VS Code</text>
   </g>
@@ -338,33 +338,33 @@
   <!-- Dots travel along arrow paths to show data flowing through       -->
   <!-- ================================================================ -->
 
-  <!-- Particles: Trigger → Listen (diagonal) -->
-  <!-- Cron → Listen -->
+  <!-- Particles: Trigger → rpi-job (diagonal) -->
+  <!-- Cron → rpi-job -->
   <circle cx="210" cy="300" r="3" fill="#d29922" opacity="0">
     <animate attributeName="opacity" values="0;0.8;0.8;0" begin="10.2s" dur="1.8s" repeatCount="indefinite"/>
     <animate attributeName="cx" from="215" to="298" begin="10.2s" dur="1.8s" repeatCount="indefinite"/>
     <animate attributeName="cy" from="305" to="362" begin="10.2s" dur="1.8s" repeatCount="indefinite"/>
   </circle>
-  <!-- Build → Listen -->
+  <!-- Build → rpi-job -->
   <circle cx="470" cy="300" r="3" fill="#d29922" opacity="0">
     <animate attributeName="opacity" values="0;0.8;0.8;0" begin="10.7s" dur="1.8s" repeatCount="indefinite"/>
     <animate attributeName="cx" from="468" to="432" begin="10.7s" dur="1.8s" repeatCount="indefinite"/>
     <animate attributeName="cy" from="305" to="362" begin="10.7s" dur="1.8s" repeatCount="indefinite"/>
   </circle>
-  <!-- Direct → Listen -->
+  <!-- rpi-client → rpi-job -->
   <circle cx="730" cy="300" r="3" fill="#d29922" opacity="0">
     <animate attributeName="opacity" values="0;0.8;0.8;0" begin="11.2s" dur="1.8s" repeatCount="indefinite"/>
     <animate attributeName="cx" from="728" to="642" begin="11.2s" dur="1.8s" repeatCount="indefinite"/>
     <animate attributeName="cy" from="305" to="362" begin="11.2s" dur="1.8s" repeatCount="indefinite"/>
   </circle>
-  <!-- Agent → Listen -->
+  <!-- Agent → rpi-job -->
   <circle cx="990" cy="300" r="3" fill="#d29922" opacity="0">
     <animate attributeName="opacity" values="0;0.8;0.8;0" begin="11.7s" dur="1.8s" repeatCount="indefinite"/>
     <animate attributeName="cx" from="988" to="832" begin="11.7s" dur="1.8s" repeatCount="indefinite"/>
     <animate attributeName="cy" from="305" to="362" begin="11.7s" dur="1.8s" repeatCount="indefinite"/>
   </circle>
 
-  <!-- Particle: Listen → Sandbox (vertical) -->
+  <!-- Particle: rpi-job → Sandbox (vertical) -->
   <circle cx="560" cy="470" r="4" fill="#f78166" opacity="0">
     <animate attributeName="opacity" values="0;0.9;0.9;0" begin="10s" dur="1.2s" repeatCount="indefinite"/>
     <animate attributeName="cy" from="475" to="550" begin="10s" dur="1.2s" repeatCount="indefinite"/>
@@ -374,7 +374,7 @@
     <animate attributeName="cy" from="475" to="550" begin="10.6s" dur="1.2s" repeatCount="indefinite"/>
   </circle>
 
-  <!-- Particle: Drive → Terminal (vertical) -->
+  <!-- Particle: rpi-term → Terminal (vertical) -->
   <circle cx="330" cy="692" r="4" fill="#58a6ff" opacity="0">
     <animate attributeName="opacity" values="0;0.9;0.9;0" begin="10s" dur="1.5s" repeatCount="indefinite"/>
     <animate attributeName="cy" from="697" to="795" begin="10s" dur="1.5s" repeatCount="indefinite"/>
@@ -384,7 +384,7 @@
     <animate attributeName="cy" from="697" to="795" begin="10.75s" dur="1.5s" repeatCount="indefinite"/>
   </circle>
 
-  <!-- Particle: Steer → GUI (vertical) -->
+  <!-- Particle: rpi-gui → GUI (vertical) -->
   <circle cx="790" cy="692" r="4" fill="#79c0ff" opacity="0">
     <animate attributeName="opacity" values="0;0.9;0.9;0" begin="10.3s" dur="1.5s" repeatCount="indefinite"/>
     <animate attributeName="cy" from="697" to="795" begin="10.3s" dur="1.5s" repeatCount="indefinite"/>
