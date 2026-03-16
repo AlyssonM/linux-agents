@@ -1,2 +1,0 @@
-[console_scripts]
-rpi-gui = rpi_gui.cli:cli
