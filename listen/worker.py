@@ -67,7 +67,7 @@ def _render_prompt(job_id: str, user_prompt: str) -> str:
     return f"{system_prompt}\n\n---\n\n{command_prompt}\n"
 
 
-def main(job_id: str, prompt: str) -> None:
+def main(job_id: str, prompt: str, model: str = "") -> None:
     job_file = JOBS_DIR / f"{job_id}.yaml"
     if not job_file.exists():
         raise SystemExit(f"Job file not found: {job_file}")
@@ -83,21 +83,29 @@ def main(job_id: str, prompt: str) -> None:
     output_file = Path(f"/tmp/listen-codex-output-{job_id}.txt")
     prompt_file.write_text(_render_prompt(job_id, prompt), encoding="utf-8")
 
+    # Build codex command with optional model
     codex_cmd = (
         f"cd '{REPO_ROOT}' && "
         f"codex exec --dangerously-bypass-approvals-and-sandbox "
         f"--skip-git-repo-check -C '{REPO_ROOT}' "
-        f"-o '{output_file}' - < '{prompt_file}'"
     )
+
+    if model:
+        codex_cmd += f"-c model='{model}' "
+
+    codex_cmd += f"-o '{output_file}' - < '{prompt_file}'"
+
     wrapped = f'{codex_cmd} ; echo "{SENTINEL_PREFIX}{token}:$?"'
 
     start_time = time.time()
     data = _read_yaml(job_file)
     data["session"] = session_name
+
     if model:
         data.setdefault("updates", []).append(f"Spawned Codex worker in tmux session using model: {model}")
     else:
         data.setdefault("updates", []).append("Spawned Codex worker in tmux session using default Codex model")
+
     _write_yaml(job_file, data)
 
     exit_code = 1
@@ -131,6 +139,9 @@ def main(job_id: str, prompt: str) -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        raise SystemExit("Usage: worker.py <job_id> <prompt>")
-    main(sys.argv[1], sys.argv[2])
+    if len(sys.argv) < 3:
+        raise SystemExit("Usage: worker.py <job_id> <prompt> [model]")
+    job_id = sys.argv[1]
+    prompt = sys.argv[2]
+    model = sys.argv[3] if len(sys.argv) > 3 else ""
+    main(job_id, prompt, model)
