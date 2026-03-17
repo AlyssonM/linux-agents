@@ -47,6 +47,7 @@ class Execution(BaseModel):
     timeout_seconds: int = Field(default=900, ge=30, le=7200)
     thinking: Literal["off", "minimal", "low", "medium", "high", "xhigh"] | None = None
     agent: str | None = None
+    model: str | None = None
 
 
 class JobRequest(BaseModel):
