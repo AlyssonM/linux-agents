@@ -1,0 +1,1 @@
+../../.codex/commands/prime.md

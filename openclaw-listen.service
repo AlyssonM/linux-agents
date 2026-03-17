@@ -7,7 +7,7 @@ Wants=network-online.target
 Type=simple
 User=alyssonpi
 WorkingDirectory=/home/alyssonpi/.openclaw/workspace/linux-agents
-Environment=DISPLAY=:1
+Environment=DISPLAY=:0
 Environment=PATH=/home/alyssonpi/.npm-global/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=/home/alyssonpi/.openclaw/workspace/linux-agents/.venv/bin/python /home/alyssonpi/.openclaw/workspace/linux-agents/openclaw-listen/main.py
 Restart=always

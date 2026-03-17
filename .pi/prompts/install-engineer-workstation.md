@@ -1,0 +1,1 @@
+../../.codex/commands/install-engineer-workstation.md
