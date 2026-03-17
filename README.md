@@ -3,9 +3,7 @@
 <div align="center">
 
 <!-- Animated SVGs -->
-<img src=".github/rpi.svg" width="120" alt="Raspberry Pi" />
-<img src=".github/gui.svg" width="120" alt="GUI Automation" />
-<img src=".github/terminal.svg" width="120" alt="Terminal" />
+<img src="assets/architecture-v3-animated.svg" width="100%" alt="Raspberry Pi" />
 
 **Projeto de automação para Linux (Raspberry Pi 4) usando OpenClaw AI agent framework**
 
