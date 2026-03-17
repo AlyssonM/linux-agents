@@ -233,5 +233,3 @@ if __name__ == "__main__":
     agent = sys.argv[3]
     model = sys.argv[4] if len(sys.argv) > 4 else ""
     main(job_id, prompt, agent, model)
-se ""
-    main(job_id, prompt, agent, model)
