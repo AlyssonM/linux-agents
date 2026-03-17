@@ -4,6 +4,7 @@ import logging
 
 import click
 
+from rpi_gui.commands.airdrop import airdrop_cmd
 from rpi_gui.commands.apps import apps_cmd
 from rpi_gui.commands.click import click_cmd
 from rpi_gui.commands.drag import drag_cmd
@@ -14,6 +15,7 @@ from rpi_gui.commands.ocr import ocr_cmd
 from rpi_gui.commands.screens import screens_cmd
 from rpi_gui.commands.scroll import scroll_cmd
 from rpi_gui.commands.see import see_cmd
+from rpi_gui.commands.send import send_cmd
 from rpi_gui.commands.type import type_cmd
 from rpi_gui.commands.window import window_cmd
 
@@ -37,6 +39,8 @@ cli.add_command(hotkey_cmd, name="hotkey")
 cli.add_command(scroll_cmd, name="scroll")
 cli.add_command(drag_cmd, name="drag")
 cli.add_command(focus_cmd, name="focus")
+cli.add_command(send_cmd, name="send")
+cli.add_command(airdrop_cmd, name="airdrop")
 
 
 if __name__ == "__main__":

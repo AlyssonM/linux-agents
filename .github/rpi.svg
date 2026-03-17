@@ -1,0 +1,74 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Raspberry Pi Logo Animated -->
+  <defs>
+    <linearGradient id="piGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#C51A4A;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6CC04A;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Base board -->
+  <rect x="20" y="40" width="80" height="50" rx="5" fill="url(#piGradient)" opacity="0.9">
+    <animate attributeName="opacity" values="0.8;1;0.8" dur="3s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- CPU -->
+  <rect x="45" y="50" width="30" height="25" fill="#222" opacity="0.8"/>
+  <circle cx="60" cy="62" r="8" fill="#444">
+    <animate attributeName="r" values="8;10;8" dur="2s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- GPIO pins -->
+  <g fill="#D4AF37">
+    <rect x="25" y="35" width="3" height="10">
+      <animate attributeName="fill" values="#D4AF37;#FFD700;#D4AF37" dur="1.5s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="35" y="35" width="3" height="10">
+      <animate attributeName="fill" values="#D4AF37;#FFD700;#D4AF37" dur="1.5s" begin="0.2s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="45" y="35" width="3" height="10">
+      <animate attributeName="fill" values="#D4AF37;#FFD700;#D4AF37" dur="1.5s" begin="0.4s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="55" y="35" width="3" height="10">
+      <animate attributeName="fill" values="#D4AF37;#FFD700;#D4AF37" dur="1.5s" begin="0.6s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="65" y="35" width="3" height="10">
+      <animate attributeName="fill" values="#D4AF37;#FFD700;#D4AF37" dur="1.5s" begin="0.8s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="75" y="35" width="3" height="10">
+      <animate attributeName="fill" values="#D4AF37;#FFD700;#D4AF37" dur="1.5s" begin="1s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="85" y="35" width="3" height="10">
+      <animate attributeName="fill" values="#D4AF37;#FFD700;#D4AF37" dur="1.5s" begin="1.2s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="95" y="35" width="3" height="10">
+      <animate attributeName="fill" values="#D4AF37;#FFD700;#D4AF37" dur="1.5s" begin="1.4s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+
+  <!-- USB ports -->
+  <rect x="15" y="60" width="8" height="12" fill="#888" rx="2">
+    <animate attributeName="fill" values="#888;#AAA;#888" dur="2s" repeatCount="indefinite"/>
+  </rect>
+  <rect x="97" y="60" width="8" height="12" fill="#888" rx="2">
+    <animate attributeName="fill" values="#888;#AAA;#888" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- HDMI -->
+  <rect x="45" y="92" width="30" height="8" fill="#666" rx="2"/>
+
+  <!-- Ethernet -->
+  <rect x="25" y="92" width="15" height="8" fill="#666" rx="2">
+    <animate attributeName="fill" values="#666;#4CAF50;#666" dur="1s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- Power LED -->
+  <circle cx="95" cy="55" r="3" fill="#4CAF50">
+    <animate attributeName="opacity" values="1;0.5;1" dur="1s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Activity LED -->
+  <circle cx="95" cy="62" r="3" fill="#FF5722">
+    <animate attributeName="opacity" values="0.3;1;0.3" dur="0.5s" repeatCount="indefinite"/>
+  </circle>
+</svg>

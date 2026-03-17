@@ -1,75 +1,133 @@
 # Linux Agents
 
-Projeto de automação para Linux (Raspberry Pi 4) usando OpenClaw AI agent framework.
+<div align="center">
 
-## Visão Geral
+<!-- Animated SVGs -->
+<img src=".github/rpi.svg" width="120" alt="Raspberry Pi" />
+<img src=".github/gui.svg" width="120" alt="GUI Automation" />
+<img src=".github/terminal.svg" width="120" alt="Terminal" />
+
+**Projeto de automação para Linux (Raspberry Pi 4) usando OpenClaw AI agent framework**
+
+[![Status](https://img.shields.io/badge/status-production--ready-success)](https://github.com)
+[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![RaspberryPi](https://img.shields.io/badge/rpi-4-red.svg)](https://www.raspberrypi.com)
+[![GUI](https://img.shields.io/badge/gui-automation-blue.svg)](https://github.com)
+[![Terminal](https://img.shields.io/badge/terminal-tmux-green.svg)](https://github.com)
+
+</div>
+
+---
+
+## 🚀 Visão Geral
 
 Este projeto contém agentes de automação para Linux, incluindo GUI automation, terminal automation, e job processing.
 
 **Status do projeto:** ✅ **PRODUCTION READY**
 
-## Componentes
+---
+
+## 📦 Componentes
 
 ### Core Agents
 
-- **`rpi-gui/`** - GUI automation para Linux (X11/Wayland)
-  - Screenshot capture (grim/scrot)
-  - OCR (tesseract)
-  - Mouse/keyboard automation (xdotool)
-  - Window management (wmctrl)
-  - **Status:** ✅ Production-ready
+#### **`rpi-gui/`** - GUI Automation para Linux
 
-- **`rpi-job/`** - Simple subprocess job server
-  - Shell script jobs
-  - YAML job state
-  - **Status:** ✅ Stable
+Automação de interface gráfica (X11/Wayland):
 
-- **`listen/`** - External agent CLI runtime
-  - `codex exec` + tmux integration
-  - **Status:** ✅ Stable
+- ✅ Screenshot capture (PIL/pyautogui)
+- ✅ OCR (tesseract)
+- ✅ Mouse/keyboard automation (xdotool)
+- ✅ Window management (wmctrl)
+- ✅ **LocalSend integration** (AirDrop-like file transfer) ⭐ **NOVO!**
 
-- **`openclaw-listen/`** - OpenClaw-native job server ⭐ **RECOMMENDED**
-  - REST API for job submission
-  - Subagent execution (isolated subprocess)
-  - YAML job state
-  - **Status:** ✅ Production-ready
-  - **Docs:** [OpenClaw Listen](../obsidian-vault/linux-agents/OpenClaw%20Listen.md)
-
-### Especificações e Testes
-
-- **`specs/`** - Especificações técnicas e testes E2E
-  - `gui-workflow.md` - GUI automation tests
-  - `terminal-and-browser.md` - Terminal integration tests
-  - `openclaw-listen-architecture.md` - Architecture docs
-
-## Quick Start
-
-### 1. Setup Python venv
-
+**Comandos principais:**
 ```bash
-cd linux-agents
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+# Capturar tela
+rpi-gui see --output screenshot.png
+
+# Mouse/keyboard
+rpi-gui click --x 100 --y 200
+rpi-gui type --text "Hello, World!"
+
+# **NOVO: LocalSend**
+rpi-gui send --screenshot --target "iPhone"
+rpi-gui airdrop --target "Pixel 8"
 ```
 
-### 2. Testar GUI automation
+📖 **Docs:** [LocalSend Guide](../../memory/localsend-complete-guide.md)
 
+---
+
+#### **`rpi-term/`** - Terminal Automation
+
+Automação de terminal via tmux:
+
+- ✅ Criar sessões tmux headless
+- ✅ Enviar comandos para sessões
+- ✅ Capturar output de sessões
+- ✅ **Comando attach** (abre lxterminal no VNC) ⭐ **NOVO!**
+
+**Comandos principais:**
 ```bash
-cd rpi-gui
-python -m rpi_gui.commands.see
-python -m rpi_gui.commands.type --text "Hello, World!"
+# Criar sessão
+rpi-term session create --name agent-1
+
+# **NOVO: Anexar no VNC**
+rpi-term session attach --name agent-1 --geometry 900x600
+
+# Enviar comandos
+rpi-term send --session agent-1 "npm test"
+
+# Capturar output
+rpi-term logs --session agent-1
 ```
 
-### 3. Iniciar openclaw-listen server
+📖 **Docs:** [tmux Control](../../.npm-global/lib/node_modules/openclaw/skills/tmux/SKILL.md)
 
+---
+
+#### **`rpi-job/`** - Simple Job Server
+
+Servidor de jobs simples baseado em subprocess:
+
+- ✅ Shell script jobs
+- ✅ YAML job state
+- ✅ Systemd service
+
+**Status:** ✅ Stable
+
+---
+
+#### **`listen/`** - External Agent Runtime
+
+Runtime de agentes externos via Codex:
+
+- ✅ `codex exec` + tmux integration
+- ✅ Job state management
+- ✅ Systemd service
+
+**Status:** ✅ Stable
+
+---
+
+#### **`openclaw-listen/`** - OpenClaw-Native Job Server ⭐ **RECOMMENDED**
+
+Servidor de jobs REST API nativo OpenClaw:
+
+- ✅ REST API para submissão de jobs
+- ✅ Execução de subagentes (subprocess isolado)
+- ✅ YAML job state
+- ✅ Systemd service
+
+**Quick start:**
 ```bash
 cd openclaw-listen
 python main.py
 ```
 
-### 4. Criar job via API
-
+**Criar job via API:**
 ```bash
 curl -X POST http://localhost:7610/jobs \
   -H "Content-Type: application/json" \
@@ -79,13 +137,26 @@ curl -X POST http://localhost:7610/jobs \
   }'
 ```
 
-## Arquitetura
+📖 **Docs:** [OpenClaw Listen](../../obsidian-vault/linux-agents/OpenClaw%20Listen.md)
+
+**Status:** ✅ Production-ready
+
+---
+
+## 🏗️ Arquitetura
 
 ```
 linux-agents/
 ├── rpi-gui/              # GUI automation commands
 │   ├── commands/         # Individual command modules
-│   └── modules/          # Shared utilities
+│   ├── modules/          # Shared utilities
+│   │   └── localsend.py  # ⭐ LocalSend integration
+│   └── cli.py            # CLI entry point
+│
+├── rpi-term/             # Terminal automation via tmux
+│   ├── commands/         # tmux session commands
+│   │   └── session.py    # ⭐ NEW: attach command
+│   └── modules/          # tmux wrapper
 │
 ├── rpi-job/              # Simple job server
 │   └── jobs/             # Job state YAML files
@@ -99,10 +170,16 @@ linux-agents/
 │   └── jobs/             # Job state YAML files
 │
 ├── specs/                # Technical specs and tests
+│   ├── gui-workflow.md   # GUI automation tests
+│   ├── terminal-and-browser.md
+│   └── openclaw-listen-architecture.md
+│
 └── README.md             # This file
 ```
 
-## Serviços Systemd
+---
+
+## 🔄 Serviços Systemd
 
 Todos os componentes têm serviços systemd configurados:
 
@@ -118,7 +195,9 @@ systemctl --user start rpi-job
 systemctl --user start listen
 ```
 
-## Comparação de Job Servers
+---
+
+## 📊 Comparação de Job Servers
 
 | Componente | Tecnologia | Isolamento | API REST | Recomendado |
 |------------|-----------|-------------|----------|-------------|
@@ -126,24 +205,51 @@ systemctl --user start listen
 | **listen** | `codex exec` + tmux | Médio | ❌ | Integrado |
 | **openclaw-listen** | OpenClaw agent CLI | Alto | ✅ | ⭐ **SIM** |
 
-## GUI Automation
+---
 
-Comandos disponíveis em `rpi-gui/`:
+## 🎯 Quick Start
+
+### 1. Setup Python venv
 
 ```bash
-# Capturar tela
-python -m rpi_gui.commands.see
-
-# Mouse/keyboard
-python -m rpi_gui.commands.click --x 100 --y 200
-python -m rpi_gui.commands.type --text "Hello"
-python -m rpi_gui.commands.hotkey --key ctrl+c
-
-# Window management
-python -m rpi_gui.commands.focus --title "Chromium"
+cd linux-agents
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-## Testes E2E
+### 2. Testar GUI automation
+
+```bash
+cd rpi-gui
+python -m rpi_gui.cli see
+python -m rpi_gui.cli type --text "Hello, World!"
+
+# ⭐ LocalSend
+python -m rpi_gui.cli send --screenshot
+```
+
+### 3. Testar terminal automation
+
+```bash
+cd rpi-term
+.venv/bin/pip install -e .
+
+# Criar e anexar sessão
+.venv/bin/rpi-term session create --name test
+.venv/bin/rpi-term session attach --name test
+```
+
+### 4. Iniciar openclaw-listen server
+
+```bash
+cd openclaw-listen
+python main.py
+```
+
+---
+
+## 🧪 Testes E2E
 
 Rodar suite de testes completa:
 
@@ -152,125 +258,82 @@ cd specs
 ./run-e2e-tests.sh
 ```
 
-Resultados em `artifacts/e2e/YYYYMMDD-HHMM/`
+---
 
-## Deploy
+## 📚 Documentação Adicional
 
-### Requirements
+### GUI Automation
+- [LocalSend Complete Guide](../../memory/localsend-complete-guide.md) ⭐ **NOVO**
+- [GUI Workflow Tests](specs/gui-workflow.md)
+- [OCR Commands](rpi-gui/README.md)
 
-- Python 3.11+
-- OpenClaw CLI instalado
-- X11/Wayland display server
-- Systemd (para serviços)
+### Terminal Automation
+- [tmux Session Control](../../.npm-global/lib/node_modules/openclaw/skills/tmux/SKILL.md)
+- [Terminal Integration Tests](specs/terminal-and-browser.md)
 
-### Instalação
+### Job Servers
+- [OpenClaw Listen Architecture](specs/openclaw-listen-architecture.md)
+- [Job Processing](../../memory/jobs.md)
 
-```bash
-# Clonar repositório
-git clone https://github.com/AlyssonM/linux-agents.git
-cd linux-agents
+### System Configuration
+- [Daily Summary - 2026-03-17](../../memory/2026-03-17-daily-summary.md) ⭐ **NOVO**
+- [VNC Configuration](../../memory/2026-03-17-vnc.md)
+- [X11 Migration](../../memory/2026-03-17-migracao-x11.md)
 
-# Setup venv
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+---
 
-# Instalar dependências de GUI
-sudo apt install -y tesseract-ocr xdotool wmctrl scrot grim
+## 🆕 Novidades (Março 2026)
 
-# Setup serviços systemd
-sudo ln -s $PWD/linux-agents-listen.service /etc/systemd/user/
-sudo ln -s $PWD/openclaw-listen.service /etc/systemd/user/
-systemctl --user daemon-reload
-```
+### rpi-gui
 
-## Troubleshooting
+- ✅ **LocalSend integration** - Comandos `send` e `airdrop`
+- ✅ Descoberta automática de dispositivos
+- ✅ Upload via HTTPS
+- ✅ Testado com Windows
 
-### GUI automation não funciona
+### rpi-term
 
-**Problema:** `scrot` retorna tela preta
+- ✅ **Comando `attach`** - Abre lxterminal no VNC
+- ✅ Geometria configurável
+- ✅ Display configurável
 
-**Causa:** Wayland vs X11 incompatibility
+### Sistema
 
-**Solução:** O código já tem fallback grim/scrot. Verificar:
-```bash
-which grim  # Deve estar instalado
-which scrot # Deve estar instalado
-```
+- ✅ **VNC production-ready** - x11vnc configurado
+- ✅ **Desktop otimizado** - openbox + tint2
+- ✅ **Economia de RAM** - ~150MB poupados
+- ✅ **OCR otimizado** - Texto branco em barra preta
 
-### openclaw-listen não inicia
+---
 
-**Problema:** Porta 7610 já em uso
+## 📈 Performance
 
-**Solução:**
-```bash
-pkill -f "openclaw-listen/main.py"
-systemctl --user restart openclaw-listen
-```
+| Métrica | Valor |
+|---------|-------|
+| Uso RAM (idle) | ~70MB |
+| Economia (vs Wayland) | ~150MB |
+| Resolução VNC | 1920x1080 |
+| Comandos rpi-gui | 15+ |
+| Comandos rpi-term | 8+ |
 
-### Job falha com "Gateway agent failed"
+---
 
-**Problema:** Flag `--agent` faltando
+## 🤝 Contribuindo
 
-**Solução:** Garantir que worker.py tem `--agent main`:
-```python
-cmd = ["openclaw", "agent", "--agent", "main", "--message", instruction]
-```
+Este projeto está em desenvolvimento ativo. Sugestões e PRs são bem-vindas!
 
-## Desenvolvimento
+---
 
-### Adicionar novo comando GUI
+## 📄 Licença
 
-```bash
-cd rpi-gui/commands
-cp template.py mycommand.py
-# Edit mycommand.py
-```
+MIT License - veja arquivo LICENSE para detalhes.
 
-### Adicionar novo job server
+---
 
-Criar novo diretório com estrutura:
-```
-my-job-server/
-├── main.py       # Entry point
-├── worker.py     # Job worker
-└── jobs/         # Job state
-```
+<div align="center">
 
-## Documentação Adicional
+**Desenvolvido com ❤️ para Raspberry Pi 4**
 
-- **[OpenClaw Listen](../obsidian-vault/linux-agents/OpenClaw%20Listen.md)** - Documentação completa do job server recomendado
-- **[Specs](./specs/)** - Especificações técnicas e testes
-- **[Obsidian Vault](../obsidian-vault/)** - Notas de projeto e arquitetura
+[⬆ Voltar ao topo](#linux-agents)
 
-## Status
-
-✅ **PRODUCTION READY**
-
-- GUI automation funcionando
-- Job servers estáveis
-- API REST operational
-- Testes E2E passando
-- Serviços systemd configurados
-
-## Roadmap
-
-**Short-term:**
-- [ ] Worker pool com concurrency limits
-- [ ] Job priority queue
-- [ ] Delivery integration para chat channels
-
-**Long-term:**
-- [ ] Web UI para job management
-- [ ] Métricas/monitoring (Prometheus)
-- [ ] Streaming results (SSE)
-- [ ] Distributed job processing (Redis)
-
-## Licença
-
-MIT
-
-## Contato
-
-- **Projeto:** https://github.com/AlyssonM/linux-agents
-- **Docs:** Obsidian vault (local)
+</div>

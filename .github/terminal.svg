@@ -1,0 +1,68 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Terminal Logo Animated -->
+  <defs>
+    <linearGradient id="termGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1E1E1E;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2D2D2D;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Terminal window -->
+  <rect x="15" y="25" width="90" height="70" rx="5" fill="url(#termGradient)" opacity="0.95">
+    <animate attributeName="opacity" values="0.9;1;0.9" dur="5s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- Title bar -->
+  <rect x="15" y="25" width="90" height="15" rx="5" fill="#3C3C3C"/>
+
+  <!-- Title bar buttons -->
+  <circle cx="22" cy="32" r="3" fill="#FF5F56">
+    <animate attributeName="fill" values="#FF5F56;#FF7B73;#FF5F56" dur="3s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="32" cy="32" r="3" fill="#FFBD2E">
+    <animate attributeName="fill" values="#FFBD2E;#FFCF6B;#FFBD2E" dur="3s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="42" cy="32" r="3" fill="#27C93F">
+    <animate attributeName="fill" values="#27C93F;#3DDF56;#27C93F" dur="3s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Terminal content area -->
+  <rect x="20" y="45" width="80" height="45" fill="#000" opacity="0.3"/>
+
+  <!-- Prompt -->
+  <text x="23" y="55" font-family="monospace" font-size="8" fill="#4CAF50">
+    <tspan>
+      $ _
+      <animate attributeName="opacity" values="1;0;1" dur="1s" repeatCount="indefinite"/>
+    </tspan>
+  </text>
+
+  <!-- Commands scrolling -->
+  <g font-family="monospace" font-size="7" fill="#FFF" opacity="0.8">
+    <text x="23" y="65">
+      <tspan>npm test</tspan>
+      <animate attributeName="opacity" values="0;0.8;0" dur="4s" begin="0s" repeatCount="indefinite"/>
+    </text>
+    <text x="23" y="72">
+      <tspan>✓ All tests passed</tspan>
+      <animate attributeName="opacity" values="0;0.8;0" dur="4s" begin="1s" repeatCount="indefinite"/>
+    </text>
+    <text x="23" y="79">
+      <tspan>git push</tspan>
+      <animate attributeName="opacity" values="0;0.8;0" dur="4s" begin="2s" repeatCount="indefinite"/>
+    </text>
+  </g>
+
+  <!-- Blinking cursor -->
+  <rect x="28" y="51" width="6" height="10" fill="#4CAF50">
+    <animate attributeName="opacity" values="1;0;1" dur="0.8s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- tmux sessions indicator -->
+  <g transform="translate(75, 75)">
+    <rect x="0" y="0" width="20" height="8" fill="#4CAF50" opacity="0.6" rx="1">
+      <animate attributeName="width" values="20;15;20" dur="2s" repeatCount="indefinite"/>
+    </rect>
+    <text x="2" y="6" font-family="monospace" font-size="5" fill="#FFF">tmux</text>
+  </g>
+</svg>

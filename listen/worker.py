@@ -164,19 +164,25 @@ def main(job_id: str, prompt: str, agent: str = "codex", model: str = "") -> Non
 
     session_name = f"job-{job_id}"
 
+    # Debug: Log BEFORE getting runner
+    debug_log = Path("/tmp/worker-debug.log")
+    with open(debug_log, "a") as f:
+        f.write(f"[{job_id}] agent={agent}, session={session_name}\n")
+
     # Get agent runner
     runner = AGENT_RUNNERS.get(agent)
     if not runner:
+        with open(debug_log, "a") as f:
+            f.write(f"[{job_id}] ERROR: runner=None for agent={agent}\n")
         raise SystemExit(f"Unknown agent: {agent}. Available: {', '.join(AGENT_RUNNERS.keys())}")
+
+    # Debug: Log AFTER getting runner
+    with open(debug_log, "a") as f:
+        f.write(f"[{job_id}] runner={runner.__name__}\n")
 
     start_time = time.time()
     data = _read_yaml(job_file)
     data["session"] = session_name
-
-    # Debug: Log which runner was selected
-    debug_log = Path("/tmp/worker-debug.log")
-    with open(debug_log, "a") as f:
-        f.write(f"[{job_id}] runner={runner.__name__}, agent={agent}\n")
 
     # Log which agent is being used
     if agent == "claude":

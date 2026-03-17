@@ -47,7 +47,7 @@ def create_job(req: JobRequest):
         "id": job_id,
         "status": "running",
         "prompt": req.prompt,
-        "agent": req.agent,
+        "agent": req.agent or "codex",
         "model": req.model,
         "created_at": now,
         "pid": 0,
