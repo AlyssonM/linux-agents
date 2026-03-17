@@ -70,10 +70,10 @@ rpi-gui airdrop --target "MyPhone" --json
 ### 3. Job Server (REST API)
 ```bash
 # Start the server
-cd apps/openclaw-listen && python main.py
+cd apps/listen && python main.py
 
 # Submit a job via CLI
-rpi-client start http://localhost:7610 "Write a python script to monitor CPU" --agent pi
+rpi-client start http://localhost:7600 "Write a python script to monitor CPU" --agent pi
 ```
 
 ---
