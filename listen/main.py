@@ -24,7 +24,7 @@ ARCHIVED_DIR.mkdir(exist_ok=True)
 
 class JobRequest(BaseModel):
     prompt: str
-    agent: str = "codex"  # codex, claude, openclaw, opencode
+    agent: str = "codex"  # codex, claude, openclaw, opencode, pi
     model: str | None = None
     timeout_seconds: int = 900
 

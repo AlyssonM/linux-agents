@@ -141,12 +141,46 @@ def _run_opencode(job_id: str, prompt: str, model: str, session_name: str) -> in
     return _wait_for_sentinel(session_name, token)
 
 
+def _run_pi(job_id: str, prompt: str, model: str, session_name: str) -> int:
+    """Run job using pi-coding-agent (pi) CLI."""
+    token = uuid.uuid4().hex[:8]
+
+    # Build pi command
+    pi_bin = "/home/alyssonpi/.npm-global/bin/pi"
+    pi_cmd = [
+        pi_bin,
+        "-p",  # Print and exit
+        f'"{prompt}"',
+    ]
+
+    # Add model if specified
+    if model:
+        pi_cmd.extend(["--model", model])
+
+    # Add thinking level if model has thinking shorthand (e.g. :high)
+    if model and ":" in model:
+        try:
+            level = model.split(":")[-1]
+            if level in ["off", "minimal", "low", "medium", "high", "xhigh"]:
+                pi_cmd.extend(["--thinking", level])
+        except Exception:
+            pass
+
+    # Wrap with sentinel
+    wrapped_cmd = ' '.join(pi_cmd) + f' ; echo "{SENTINEL_PREFIX}{token}:$?"'
+
+    _ensure_session(session_name, str(REPO_ROOT))
+    _send_keys(session_name, wrapped_cmd)
+    return _wait_for_sentinel(session_name, token)
+
+
 # Agent runners mapping
 AGENT_RUNNERS = {
     "codex": _run_codex,
     "claude": _run_openclaw,  # claude maps to OpenClaw for now
     "openclaw": _run_openclaw,
     "opencode": _run_opencode,
+    "pi": _run_pi,
 }
 
 
@@ -191,6 +225,8 @@ def main(job_id: str, prompt: str, agent: str = "codex", model: str = "") -> Non
         agent_display = "OpenClaw agent CLI"
     elif agent == "opencode":
         agent_display = "OpenCode CLI"
+    elif agent == "pi":
+        agent_display = "Pi coding agent"
     else:
         agent_display = f"{agent.capitalize()}"
 
@@ -227,8 +263,8 @@ def main(job_id: str, prompt: str, agent: str = "codex", model: str = "") -> Non
                     output_file = Path(f"/tmp/listen-codex-output-{job_id}.txt")
                     if output_file.exists():
                         data["summary"] = output_file.read_text(encoding="utf-8").strip()[:4000]
-                elif agent in ["opencode", "openclaw"] and _session_exists(session_name):
-                    # Capture tmux output for opencode/openclaw
+                elif agent in ["opencode", "openclaw", "pi"] and _session_exists(session_name):
+                    # Capture tmux output for opencode/openclaw/pi
                     captured = _capture_pane(session_name)
                     lines = []
 
@@ -243,8 +279,8 @@ def main(job_id: str, prompt: str, agent: str = "codex", model: str = "") -> Non
                         # Skip command prompts
                         if any(line.strip().startswith(prefix) for prefix in ['$', '>', 'alyssonpi@']):
                             continue
-                        # Skip lines with binary paths or opencode command
-                        if '/bin/opencode' in line or 'opencode run' in line:
+                        # Skip lines with binary paths or command prefixes
+                        if any(p in line for p in ['/bin/opencode', 'opencode run', '/bin/pi', 'pi -p']):
                             continue
                         lines.append(line)
 

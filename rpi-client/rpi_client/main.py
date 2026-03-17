@@ -24,9 +24,17 @@ def cli(ctx: click.Context, verbose: bool) -> None:
 @cli.command("start")
 @click.argument("url")
 @click.argument("prompt")
-def start_cmd(url: str, prompt: str) -> None:
+@click.option("--agent", help="Agent to use (codex, claude, openclaw, opencode, pi)")
+@click.option("--model", help="Model to use")
+@click.option("--json", "output_json", is_flag=True, help="Output as JSON")
+def start_cmd(url: str, prompt: str, agent: str | None, model: str | None, output_json: bool) -> None:
     try:
-        click.echo(client.start_job(url, prompt)["job_id"])
+        res = client.start_job(url, prompt, agent=agent, model=model)
+        if output_json:
+            import json
+            click.echo(json.dumps(res))
+        else:
+            click.echo(res["job_id"])
     except client.ClientError as exc:
         raise click.ClickException(str(exc)) from exc
 
