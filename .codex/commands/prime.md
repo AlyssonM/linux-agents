@@ -27,8 +27,8 @@ Understand the linux-agents monorepo: a Linux automation framework for Raspberry
    - READ `.codex/commands/rpi-gui-term-user-prompt.md`
 
 4. Read entry points:
-   - READ `apps/rpi-gui/src/rpi_gui/__init__.py`
-   - READ `apps/rpi-term/rpi_term/main.py`
+   - READ `apps/rpi-gui/rpi_gui/cli.py`
+   - READ `apps/rpi-term/rpi_term/cli.py`
    - READ `apps/rpi-job/rpi_job/main.py`
    - READ `apps/rpi-client/rpi_client/main.py`
 

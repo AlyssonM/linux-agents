@@ -75,7 +75,7 @@ Isso garanteis que ambos os CLIs usem a mesma configuração.
 
 **Variáveis:**
 - `{{JOB_ID}}` - Identificador do job (8-character hex)
-- Job file: `linux-agents/listen/jobs/{{JOB_ID}}.yaml`
+- Job file: `apps/listen/jobs/{{JOB_ID}}.yaml`
 
 ### job-system-prompt.md
 
@@ -85,7 +85,7 @@ Isso garanteis que ambos os CLIs usem a mesma configuração.
 
 **Variáveis:**
 - `{{JOB_ID}}` - Identificador do job
-- Job file: `linux-agents/rpi-job/jobs/{{JOB_ID}}.yaml`
+- Job file: `apps/rpi-job/jobs/{{JOB_ID}}.yaml`
 
 ## Commands
 
