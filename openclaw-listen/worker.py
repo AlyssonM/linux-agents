@@ -64,6 +64,7 @@ def _build_runner_cmd(job: dict, job_id: str) -> list[str]:
         _session_key_for_job(job_id),
         "--timeout-ms",
         str(timeout_seconds * 1000),
+        "--spawn-via-cli",
     ]
     if thinking:
         cmd += ["--thinking", thinking]
