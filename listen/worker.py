@@ -155,8 +155,8 @@ def main(job_id: str, prompt: str, agent: str = "codex", model: str = "") -> Non
     if not job_file.exists():
         raise SystemExit(f"Job file not found: {job_id}")
 
-    # Validate prompts exist for codex/openclaw
-    if agent in ["codex", "claude", "openclaw"]:
+    # Validate prompts exist for codex
+    if agent == "codex":
         if not CODEX_SYSTEM_PROMPT.exists():
             raise SystemExit(f"Missing system prompt: {CODEX_SYSTEM_PROMPT}")
         if not CODEX_USER_PROMPT.exists():
