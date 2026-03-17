@@ -49,11 +49,11 @@ def _run_subagent(job: dict, job_id: str) -> dict:
     instruction = job.get("instruction") or ""
     execution = job.get("execution") or {}
     timeout_seconds = int(execution.get("timeout_seconds") or 900)
-    model = execution.get("model") or ""
 
     _append_update(job, "Running job with subagent")
 
     # Build inline subagent script that calls OpenClaw agent
+    # Note: model is configured in the agent, not via CLI flag
     subagent_script = f"""#!/usr/bin/env python3
 import sys
 import subprocess
@@ -68,11 +68,6 @@ cmd = [
     "--agent", "main",
     "--message", instruction,
 ]
-
-# Add model selection if specified
-model = "{model}"
-if model:
-    cmd.extend(["--model", model])
 
 result = subprocess.run(cmd, capture_output=True, text=True, timeout={timeout_seconds})
 
