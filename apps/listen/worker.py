@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -19,6 +20,18 @@ REPO_ROOT = BASE_DIR.parent.parent
 CODEX_SYSTEM_PROMPT = REPO_ROOT / ".opencode" / "agents" / "job-system-prompt.md"
 CODEX_USER_PROMPT = REPO_ROOT / ".opencode" / "commands" / "rpi-gui-term-user-prompt.md"
 
+_THINKING_LEVELS = {"off", "minimal", "low", "medium", "high", "xhigh"}
+
+
+def _split_model_and_thinking(model: str) -> tuple[str, str | None]:
+    if not model or ":" not in model:
+        return model, None
+    base, suffix = model.rsplit(":", 1)
+    suffix = suffix.strip()
+    if suffix in _THINKING_LEVELS:
+        return base, suffix
+    return model, None
+
 
 def _tmux(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
     return subprocess.run(["tmux", *args], capture_output=True, text=True, check=check)
@@ -32,11 +45,12 @@ def _ensure_session(name: str, cwd: str) -> None:
     if _session_exists(name):
         return
     _tmux("new-session", "-d", "-s", name, "-c", cwd)
+    # Ensure DISPLAY is set for the session
+    _send_keys(name, "export DISPLAY=:0")
 
 
 def _send_keys(session: str, keys: str) -> None:
-    _tmux("send-keys", "-t", f"{session}:", keys)
-    _tmux("send-keys", "-t", f"{session}:", "Enter")
+    _tmux("send-keys", "-t", f"{session}:", keys, "C-m")
 
 
 def _capture_pane(session: str) -> str:
@@ -141,35 +155,41 @@ def _run_opencode(job_id: str, prompt: str, model: str, session_name: str) -> in
     return _wait_for_sentinel(session_name, token)
 
 
-def _run_pi(job_id: str, prompt: str, model: str, session_name: str) -> int:
+def _run_pi(job_id: str, prompt: str, model: str, session_name: str, api_key_env: str | None = None, api_key_value: str | None = None) -> int:
     """Run job using pi-coding-agent (pi) CLI."""
     token = uuid.uuid4().hex[:8]
+    model_base, thinking_level = _split_model_and_thinking(model)
 
     # Build pi command
     pi_bin = "/home/alyssonpi/.npm-global/bin/pi"
-    pi_cmd = [
-        pi_bin,
-        "-p",  # Print and exit
-        f'"{prompt}"',
-    ]
-
-    # Add model if specified
-    if model:
-        pi_cmd.extend(["--model", model])
-
-    # Add thinking level if model has thinking shorthand (e.g. :high)
-    if model and ":" in model:
-        try:
-            level = model.split(":")[-1]
-            if level in ["off", "minimal", "low", "medium", "high", "xhigh"]:
-                pi_cmd.extend(["--thinking", level])
-        except Exception:
-            pass
-
-    # Wrap with sentinel
-    wrapped_cmd = ' '.join(pi_cmd) + f' ; echo "{SENTINEL_PREFIX}{token}:$?"'
+    # Use single quotes for the whole prompt to avoid shell expansion issues
 
     _ensure_session(session_name, str(REPO_ROOT))
+    if not api_key_env and model_base:
+        provider = model_base.split("/", 1)[0].split(":", 1)[0].strip()
+        if provider:
+            provider_norm = re.sub(r"[^A-Za-z0-9]", "_", provider).upper()
+            api_key_env = f"{provider_norm}_API_KEY"
+
+    if api_key_env and api_key_value is None:
+        import os
+
+        api_key_value = os.environ.get(api_key_env)
+
+    prefix = ""
+    if api_key_env and api_key_value is not None:
+        prefix = f"export {api_key_env}={shlex.quote(api_key_value)} && "
+
+    pi_cmd_str = prefix + f"{pi_bin} -p '{prompt}'"
+
+    # Add model if specified
+    if model_base:
+        pi_cmd_str += f" --model '{model_base}'"
+    if thinking_level:
+        pi_cmd_str += f" --thinking {thinking_level}"
+
+    # Wrap with sentinel
+    wrapped_cmd = pi_cmd_str + f' ; echo "{SENTINEL_PREFIX}{token}:$?"'
     _send_keys(session_name, wrapped_cmd)
     return _wait_for_sentinel(session_name, token)
 
@@ -184,7 +204,14 @@ AGENT_RUNNERS = {
 }
 
 
-def main(job_id: str, prompt: str, agent: str = "codex", model: str = "") -> None:
+def main(
+    job_id: str,
+    prompt: str,
+    agent: str = "codex",
+    model: str = "",
+    api_key_env: str | None = None,
+    api_key_value: str | None = None,
+) -> None:
     job_file = JOBS_DIR / f"{job_id}.yaml"
     if not job_file.exists():
         raise SystemExit(f"Job file not found: {job_id}")
@@ -239,7 +266,10 @@ def main(job_id: str, prompt: str, agent: str = "codex", model: str = "") -> Non
 
     exit_code = 1
     try:
-        exit_code = runner(job_id, prompt, model, session_name)
+        if agent == "pi":
+            exit_code = runner(job_id, prompt, model, session_name, api_key_env, api_key_value)
+        else:
+            exit_code = runner(job_id, prompt, model, session_name)
     except Exception as exc:
         data = _read_yaml(job_file)
         data["status"] = "failed"
@@ -272,6 +302,10 @@ def main(job_id: str, prompt: str, agent: str = "codex", model: str = "") -> Non
                         line = line.rstrip()
                         # Skip empty lines
                         if not line:
+                            continue
+                        if line.strip().startswith("export DISPLAY="):
+                            continue
+                        if "API_KEY" in line:
                             continue
                         # Skip sentinel and its remnants
                         if SENTINEL_PREFIX in line or ':$?' in line or ':$\'"' in line:
@@ -306,9 +340,10 @@ if __name__ == "__main__":
     prompt = sys.argv[2]
     agent = sys.argv[3] if len(sys.argv) > 3 else "codex"
     model = sys.argv[4] if len(sys.argv) > 4 else ""
-    # Debug: log received args
     import os
+    api_key_env = os.environ.get("LISTEN_API_KEY_ENV") or (sys.argv[5] if len(sys.argv) > 5 else None)
+    api_key_value = os.environ.get("LISTEN_API_KEY") or (sys.argv[6] if len(sys.argv) > 6 else None)
     debug_log = Path("/tmp/worker-debug.log")
     with open(debug_log, "a") as f:
-        f.write(f"[{job_id}] agent={agent}, prompt={prompt}, model={model}\n")
-    main(job_id, prompt, agent, model)
+        f.write(f"[{job_id}] agent={agent}, model={model}, api_key_env={api_key_env}, api_key_present={bool(api_key_value)}\n")
+    main(job_id, prompt, agent, model, api_key_env, api_key_value)

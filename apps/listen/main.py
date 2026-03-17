@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -27,6 +28,18 @@ class JobRequest(BaseModel):
     agent: str = "codex"  # codex, claude, openclaw, opencode, pi
     model: str | None = None
     timeout_seconds: int = 900
+    api_key: str | None = None
+    api_key_env: str | None = None
+
+
+def _infer_api_key_env(model: str | None) -> str | None:
+    if not model:
+        return None
+    provider = model.split("/", 1)[0].split(":", 1)[0].strip()
+    if not provider:
+        return None
+    provider = re.sub(r"[^A-Za-z0-9]", "_", provider).upper()
+    return f"{provider}_API_KEY"
 
 
 def _write_job(path: Path, data: dict) -> None:
@@ -58,9 +71,16 @@ def create_job(req: JobRequest):
     _write_job(job_file, data)
 
     worker_path = BASE_DIR / "worker.py"
+    env = os.environ.copy()
+    if req.api_key:
+        api_key_env = req.api_key_env or _infer_api_key_env(req.model)
+        if api_key_env:
+            env["LISTEN_API_KEY_ENV"] = api_key_env
+            env["LISTEN_API_KEY"] = req.api_key
     proc = subprocess.Popen(
         [sys.executable, str(worker_path), job_id, req.prompt, req.agent, req.model or ""],
         cwd=str(BASE_DIR),
+        env=env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
