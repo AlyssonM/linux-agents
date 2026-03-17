@@ -129,9 +129,9 @@ def _run_opencode(job_id: str, prompt: str, model: str, session_name: str) -> in
         prompt,
     ]
 
-    # TODO: Add model support when opencode supports it
-    # if model:
-    #     opencode_cmd.extend(["--model", model])
+    # Add model selection if specified
+    if model:
+        opencode_cmd.extend(["--model", model])
 
     # Wrap with sentinel
     wrapped_cmd = ' '.join([str(c) for c in opencode_cmd]) + f' ; echo "{SENTINEL_PREFIX}{token}:$?"'
