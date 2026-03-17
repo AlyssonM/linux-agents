@@ -1,6 +1,9 @@
 import { spawn } from 'node:child_process';
 import process from 'node:process';
 import { Readable, Writable } from 'node:stream';
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
 
 import { ClientSideConnection, PROTOCOL_VERSION } from 'file:///home/alyssonpi/.npm-global/lib/node_modules/openclaw/node_modules/@agentclientprotocol/sdk/dist/acp.js';
 
@@ -115,6 +118,64 @@ function buildMessage(messageOrder, messageChunksById) {
     .trim();
 }
 
+function createSessionStoreEntry({ sessionKey, agentId = 'main', cwd }) {
+  const stateDir = '/home/alyssonpi/.openclaw/sessions';
+  const agentDir = path.join(stateDir, 'agents', 'main');
+  const storePath = path.join(agentDir, 'sessions.json');
+  
+  try {
+    const storeDir = path.dirname(storePath);
+    if (!fs.existsSync(storeDir)) {
+      fs.mkdirSync(storeDir, { recursive: true });
+    }
+    
+    let store = {};
+    if (fs.existsSync(storePath)) {
+      const content = fs.readFileSync(storePath, 'utf8');
+      store = JSON.parse(content);
+    }
+    
+    if (!store[sessionKey]) {
+      const now = Date.now();
+      const entry = {
+        sessionId: crypto.randomUUID(),
+        updatedAt: now,
+        sessionFile: null,
+        spawnedBy: 'agent:main:main',
+        spawnedWorkspaceDir: cwd || process.cwd(),
+        spawnDepth: 1,
+        systemSent: false,
+        abortedLastRun: false,
+        thinkingLevel: 'off',
+        verboseLevel: 'off',
+        reasoningLevel: 'off',
+        elevatedLevel: 'off',
+        fastMode: false,
+        ttsAuto: null,
+        execHost: null,
+        execSecurity: null,
+        execAsk: null,
+        chatType: null,
+        acp: {
+          backend: 'stdio',
+          agent: agentId,
+          runtimeSessionName: crypto.randomUUID(),
+          mode: 'persistent',
+          state: 'idle',
+          lastActivityAt: now,
+        }
+      };
+      
+      store[sessionKey] = entry;
+      fs.writeFileSync(storePath, JSON.stringify(store, null, 2));
+      console.error('[acp-spawn-wrapper] Created session store entry:', sessionKey);
+    }
+  } catch (err) {
+    console.error('[acp-spawn-wrapper] Error creating session store entry:', err.message);
+    throw err;
+  }
+}
+
 async function runAcpSpawnViaCli({ cwd, instruction, agentId = 'main', mode = 'persistent', label = 'listen-v2', timeoutMs, thinking }) {
   const agent = 'main';
   const spawnedBy = `agent:${agent}:main`;
@@ -217,7 +278,20 @@ async function runAcpSpawnViaCli({ cwd, instruction, agentId = 'main', mode = 'p
 }
 
 async function runAttempt({ cwd, instruction, sessionKey, timeoutMs, thinking, attempt, agentId = 'main' }) {
-  const child = spawn(process.execPath, [OPENCLAW_ENTRY, 'acp', '--session', sessionKey, '--reset-session'], {
+  console.error(`[acp-spawn-wrapper] Pre-populating session store for: ${sessionKey}`);
+  
+  try {
+    createSessionStoreEntry({
+      sessionKey,
+      agentId,
+      cwd,
+    });
+  } catch (err) {
+    console.error(`[acp-spawn-wrapper] Failed to pre-populate store: ${err.message}`);
+  }
+
+  console.error(`[acp-spawn-wrapper] Starting ACP client for: ${sessionKey}`);
+  const child = spawn(process.execPath, [OPENCLAW_ENTRY, 'acp', '--session', sessionKey], {
     cwd,
     stdio: ['pipe', 'pipe', 'pipe'],
     env: {
