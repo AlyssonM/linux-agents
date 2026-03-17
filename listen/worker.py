@@ -175,9 +175,11 @@ def main(job_id: str, prompt: str, agent: str = "codex", model: str = "") -> Non
 
     # Log which agent is being used
     if agent == "claude":
-        agent_display = "OpenClaw (claude compatibility mode)"
+        agent_display = "OpenCode (claude compatibility mode)"
     elif agent == "openclaw":
         agent_display = "OpenClaw agent CLI"
+    elif agent == "opencode":
+        agent_display = "OpenCode CLI"
     else:
         agent_display = f"{agent.capitalize()}"
 
@@ -230,4 +232,6 @@ if __name__ == "__main__":
     prompt = sys.argv[2]
     agent = sys.argv[3]
     model = sys.argv[4] if len(sys.argv) > 4 else ""
+    main(job_id, prompt, agent, model)
+se ""
     main(job_id, prompt, agent, model)
