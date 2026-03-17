@@ -209,10 +209,34 @@ def main(job_id: str, prompt: str, agent: str = "codex", model: str = "") -> Non
             data["duration_seconds"] = duration
             data["completed_at"] = now
 
-            # Try to read output file for codex
-            output_file = Path(f"/tmp/listen-codex-output-{job_id}.txt")
-            if output_file.exists() and not data.get("summary"):
-                data["summary"] = output_file.read_text(encoding="utf-8").strip()[:4000]
+            # Capture summary if not already set
+            if not data.get("summary"):
+                if agent == "codex":
+                    # Read output file for codex
+                    output_file = Path(f"/tmp/listen-codex-output-{job_id}.txt")
+                    if output_file.exists():
+                        data["summary"] = output_file.read_text(encoding="utf-8").strip()[:4000]
+                elif agent in ["opencode", "openclaw"] and _session_exists(session_name):
+                    # Capture tmux output for opencode/openclaw
+                    captured = _capture_pane(session_name)
+                    lines = []
+
+                    for line in captured.split('\n'):
+                        line = line.rstrip()
+                        # Skip empty lines
+                        if not line:
+                            continue
+                        # Skip sentinel
+                        if SENTINEL_PREFIX in line:
+                            continue
+                        # Skip command prompts
+                        if any(line.strip().startswith(prefix) for prefix in ['$', '>', 'alyssonpi@', '/']):
+                            continue
+                        lines.append(line)
+
+                    # Take last 20 useful lines
+                    if lines:
+                        data["summary"] = '\n'.join(lines[-20:])[:4000]
 
             _write_yaml(job_file, data)
 
