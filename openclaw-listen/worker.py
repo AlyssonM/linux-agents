@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import signal
 import subprocess
 import sys
@@ -11,8 +12,12 @@ import yaml
 
 BASE_DIR = Path(__file__).parent
 JOBS_DIR = BASE_DIR / "jobs"
-_CURRENT_PROC: subprocess.Popen[str] | None = None
-_CANCEL_REQUESTED = False
+REPO_ROOT = BASE_DIR.parent
+ACP_RUNNER = BASE_DIR / "acp_runner.mjs"
+NODE_BIN = "/usr/bin/node"
+
+_CHILD: subprocess.Popen[str] | None = None
+_CANCELLED = False
 
 
 def _now() -> str:
@@ -32,112 +37,118 @@ def _append_update(data: dict, text: str) -> None:
     data["updated_at"] = _now()
 
 
-def _handle_signal(signum: int, _frame) -> None:
-    global _CANCEL_REQUESTED
-    _CANCEL_REQUESTED = True
-    if _CURRENT_PROC and _CURRENT_PROC.poll() is None:
-        _CURRENT_PROC.terminate()
+def _session_key_for_job(job_id: str) -> str:
+    return f"agent:listen-v2:job:{job_id}"
 
 
-for _sig in (signal.SIGTERM, signal.SIGINT):
-    signal.signal(_sig, _handle_signal)
+def _on_signal(signum, frame):  # noqa: ARG001
+    global _CANCELLED
+    _CANCELLED = True
+    if _CHILD and _CHILD.poll() is None:
+        _CHILD.terminate()
 
 
-def _build_openclaw_cmd(job: dict) -> list[str]:
+def _build_runner_cmd(job: dict, job_id: str) -> list[str]:
     execution = job.get("execution") or {}
-    delivery = job.get("delivery") or {}
     instruction = job.get("instruction") or ""
+    timeout_seconds = int(execution.get("timeout_seconds") or 900)
     thinking = execution.get("thinking")
-    agent = execution.get("agent") or "main"
-
-    cmd = [OPENCLAW_BIN, "agent", "--agent", agent, "--local", "--json", "--message", instruction]
-    timeout_seconds = execution.get("timeout_seconds")
-    if timeout_seconds:
-        cmd += ["--timeout", str(timeout_seconds)]
+    cmd = [
+        NODE_BIN,
+        str(ACP_RUNNER),
+        "--instruction",
+        instruction,
+        "--cwd",
+        str(REPO_ROOT),
+        "--session-key",
+        _session_key_for_job(job_id),
+        "--timeout-ms",
+        str(timeout_seconds * 1000),
+    ]
     if thinking:
         cmd += ["--thinking", thinking]
-    if agent:
-        cmd += ["--agent", agent]
-
-    if delivery.get("send_result"):
-        cmd += ["--deliver"]
-        if delivery.get("channel"):
-            cmd += ["--reply-channel", delivery["channel"]]
-        if delivery.get("target"):
-            cmd += ["--reply-to", delivery["target"]]
     return cmd
 
 
-def _extract_result(stdout: str) -> tuple[str, str]:
-    text = stdout.strip()
-    if not text:
-        return "", ""
-    lines = [line for line in text.splitlines() if line.strip()]
-    for line in reversed(lines):
-        try:
-            payload = json.loads(line)
-            if isinstance(payload, dict):
-                if "message" in payload and isinstance(payload["message"], str):
-                    msg = payload["message"].strip()
-                    return msg[:4000], msg
-                if "output" in payload and isinstance(payload["output"], str):
-                    msg = payload["output"].strip()
-                    return msg[:4000], msg
-        except json.JSONDecodeError:
-            continue
-    return text[:4000], text
+def _parse_runner_output(stdout: str, stderr: str) -> tuple[str, dict]:
+    lines = [line.strip() for line in stdout.splitlines() if line.strip()]
+    if not lines:
+        raise RuntimeError(stderr.strip() or "ACP runner returned no output")
+    last = lines[-1]
+    data = json.loads(last)
+    message = (data.get("message") or "").strip() if isinstance(data, dict) else ""
+    return message, data
 
 
 def main(job_id: str) -> None:
-    global _CURRENT_PROC
+    global _CHILD
+    signal.signal(signal.SIGTERM, _on_signal)
+    signal.signal(signal.SIGINT, _on_signal)
 
     job_file = JOBS_DIR / f"{job_id}.yaml"
     if not job_file.exists():
         raise SystemExit(f"Job not found: {job_file}")
 
     job = _read_job(job_file)
-    strategy = ((job.get("execution") or {}).get("resolved_strategy")) or "inline"
-
-    if strategy == "acp":
-        job["status"] = "failed"
-        job["error"] = {"message": "ACP strategy not implemented in openclaw-listen v1"}
-        _append_update(job, "ACP strategy requested but not implemented in v1")
-        _write_job(job_file, job)
-        return
-
-    _append_update(job, f"Execution strategy resolved to: {strategy}")
+    strategy = ((job.get("execution") or {}).get("strategy")) or "auto"
+    resolved_strategy = "acp"
+    job.setdefault("execution", {})["resolved_strategy"] = resolved_strategy
+    job.setdefault("runtime", {})["session_key"] = _session_key_for_job(job_id)
+    _append_update(job, f"Execution strategy resolved to: {resolved_strategy}")
     job["status"] = "running"
     _write_job(job_file, job)
 
-    cmd = _build_openclaw_cmd(job)
-    _append_update(job, "Dispatching job to local OpenClaw runtime")
+    cmd = _build_runner_cmd(job, job_id)
+    _append_update(job, "Dispatching job to OpenClaw ACP runtime")
     _write_job(job_file, job)
 
-    _CURRENT_PROC = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    stdout, stderr = _CURRENT_PROC.communicate()
-    returncode = _CURRENT_PROC.returncode
+    try:
+        _CHILD = subprocess.Popen(cmd, cwd=str(BASE_DIR), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        stdout, stderr = _CHILD.communicate()
+    except Exception as exc:
+        job = _read_job(job_file)
+        job["status"] = "failed"
+        job["error"] = {"message": str(exc)}
+        _append_update(job, f"Runner spawn failed: {exc}")
+        _write_job(job_file, job)
+        return
 
     job = _read_job(job_file)
-    summary, full_message = _extract_result(stdout)
     job.setdefault("result", {})
-    job["result"]["summary"] = summary
-    job["result"]["message"] = full_message
-    job["result"]["exit_code"] = returncode
-    if stderr.strip():
-        job["result"]["stderr"] = stderr.strip()[:4000]
 
-    if _CANCEL_REQUESTED:
+    if _CANCELLED:
         job["status"] = "cancelled"
-        job["error"] = None
-        _append_update(job, "Cancellation requested")
-    elif returncode == 0:
-        job["status"] = "succeeded"
-        _append_update(job, "OpenClaw runtime completed successfully")
+        job["error"] = {"message": "Job cancelled"}
+        _append_update(job, "ACP worker cancelled")
+        _write_job(job_file, job)
+        return
+
+    if _CHILD.returncode == 0:
+        try:
+            message, payload = _parse_runner_output(stdout, stderr)
+            job["status"] = "succeeded"
+            job["result"]["summary"] = message[:4000]
+            job["result"]["message"] = message
+            job["result"]["stop_reason"] = payload.get("stopReason")
+            job["runtime"]["session_id"] = payload.get("sessionId")
+            job["runtime"]["session_key"] = payload.get("sessionKey") or job["runtime"].get("session_key")
+            job["runtime"]["tool_events"] = payload.get("toolEvents", 0)
+            if payload.get("updates"):
+                job["runtime"]["acp_updates"] = payload.get("updates")
+            _append_update(job, "OpenClaw ACP runtime completed successfully")
+        except Exception as exc:
+            job["status"] = "failed"
+            job["error"] = {"message": f"Failed to parse ACP runner output: {exc}"}
+            job["result"]["stderr"] = stderr.strip()[:4000]
+            _append_update(job, "ACP runtime returned unparseable output")
     else:
         job["status"] = "failed"
-        job["error"] = {"message": stderr.strip() or f"openclaw agent exited with code {returncode}"}
-        _append_update(job, "OpenClaw runtime failed")
+        err_message = stderr.strip() or stdout.strip() or f"ACP runner exited with code {_CHILD.returncode}"
+        job["error"] = {"message": err_message[:4000]}
+        job["result"]["stderr"] = stderr.strip()[:4000]
+        _append_update(job, "OpenClaw ACP runtime failed")
 
+    job["result"]["exit_code"] = _CHILD.returncode
     job["updated_at"] = _now()
     _write_job(job_file, job)
 

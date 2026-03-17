@@ -18,9 +18,9 @@ This component is complementary to the existing job-server flows:
 
 ## Current v1 behavior
 
-- `execution.strategy=auto` currently resolves to `inline`
-- `subagent` is accepted as API input but also resolves to `inline` in v1
-- `acp` is reserved and currently returns a clear not-implemented failure
+- `execution.strategy=auto` resolves to `acp`
+- `inline` and `subagent` are currently normalized onto the ACP-backed runner in v2
+- `acp` is the native execution path for this component
 - cancellation is best-effort and currently targets the worker process
 - delivery uses OpenClaw's `--reply-channel` and `--reply-to` flags; `delivery.reply_to` is stored as metadata only for now
 
@@ -99,7 +99,7 @@ v1 is intentionally pragmatic:
 
 - YAML-backed storage
 - async subprocess worker model
-- execution via local `openclaw agent`
+- execution via a per-job ACP subprocess and isolated session key
 - explicit metadata for source and delivery
 - simple strategy resolution
 

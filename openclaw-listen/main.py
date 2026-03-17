@@ -74,7 +74,7 @@ def create_job(req: JobRequest):
     job_id = uuid4().hex[:8]
     job_file = JOBS_DIR / f"{job_id}.yaml"
     requested_strategy = req.execution.strategy
-    resolved_strategy = "inline" if requested_strategy in {"auto", "subagent"} else requested_strategy
+    resolved_strategy = "acp" if requested_strategy in {"auto", "inline", "subagent", "acp"} else "acp"
 
     data = {
         "id": job_id,
