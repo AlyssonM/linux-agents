@@ -1,1 +1,1 @@
-../.claude/commands/install-rpi-sandbox.md
+../../.codex/commands/install-rpi-sandbox.md

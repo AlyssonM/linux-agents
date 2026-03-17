@@ -1,1 +1,1 @@
-../.claude/commands/install-engineer-workstation.md
+../../.codex/commands/install-engineer-workstation.md

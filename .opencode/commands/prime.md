@@ -1,1 +1,1 @@
-../.claude/commands/prime.md
+../../.codex/commands/prime.md

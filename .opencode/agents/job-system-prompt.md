@@ -1,1 +1,1 @@
-../.claude/agents/job-system-prompt.md
+../../.codex/agents/listen-job-system-prompt.md

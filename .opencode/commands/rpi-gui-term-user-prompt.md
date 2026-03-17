@@ -1,1 +1,1 @@
-../.claude/commands/rpi-gui-term-user-prompt.md
+../../.codex/commands/rpi-gui-term-user-prompt.md
