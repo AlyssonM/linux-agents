@@ -115,7 +115,108 @@ function buildMessage(messageOrder, messageChunksById) {
     .trim();
 }
 
-async function runAttempt({ cwd, instruction, sessionKey, timeoutMs, thinking, attempt }) {
+async function runAcpSpawnViaCli({ cwd, instruction, agentId = 'main', mode = 'persistent', label = 'listen-v2', timeoutMs, thinking }) {
+  const agent = 'main';
+  const spawnedBy = `agent:${agent}:main`;
+  const sessionKey = `agent:${agentId}:acp:${crypto.randomUUID()}`;
+
+  const cmd = [
+    process.execPath,
+    OPENCLAW_ENTRY,
+    'acp',
+    'spawn',
+    '--agent',
+    agentId,
+    '--mode',
+    mode,
+    '--label',
+    label,
+    '--spawnedBy',
+    spawnedBy,
+    '--timeout-ms',
+    String(timeoutMs || 900000),
+  ];
+
+  if (thinking) {
+    cmd.push('--thinking', thinking);
+  }
+
+  if (cwd) {
+    cmd.push('--cwd', cwd);
+  }
+
+  console.error('[acp-spawn-wrapper] Spawning ACP session via CLI:', cmd.join(' '));
+
+  const child = spawn(cmd[0], cmd.slice(1), {
+    cwd,
+    stdio: ['inherit', 'pipe', 'pipe'],
+    env: {
+      ...process.env,
+      OPENCLAW_SHELL: 'openclaw-listen-acp-runner',
+    },
+  });
+
+  if (!child.stdout || !child.stderr) {
+    throw new Error('failed to open ACP spawn stdio pipes');
+  }
+
+  let output = '';
+  let stderr = '';
+  let ignoredStdoutLines = [];
+
+  child.stdout.on('data', (chunk) => {
+    output += String(chunk);
+  });
+
+  child.stderr.on('data', (chunk) => {
+    stderr += String(chunk);
+  });
+
+  let completed = false;
+  child.on('close', (code) => {
+    completed = true;
+  });
+
+  try {
+    await withTimeout(
+      Promise.race([
+        new Promise((resolve) => {
+          child.on('close', (code) => {
+            resolve({ code });
+          });
+        }),
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error(`acp spawn CLI timed out after ${timeoutMs || 900000}ms`)),
+            timeoutMs || 900000,
+          ),
+        ),
+      ]),
+      timeoutMs || 900000,
+      'ACP spawn CLI',
+    );
+
+    if (!completed) {
+      child.kill();
+      throw new Error('ACP spawn CLI did not complete within timeout');
+    }
+
+    if (child.returncode !== 0) {
+      throw new Error(`acp spawn CLI exited with code ${child.returncode}: ${stderr.slice(0, 4000)}`);
+    }
+
+    console.error('[acp-spawn-wrapper] ACP spawn completed successfully');
+  } catch (err) {
+    console.error('[acp-spawn-wrapper] ACP spawn failed:', err.message);
+    throw err;
+  } finally {
+    child.kill();
+  }
+
+  return sessionKey;
+}
+
+async function runAttempt({ cwd, instruction, sessionKey, timeoutMs, thinking, attempt, agentId = 'main' }) {
   const child = spawn(process.execPath, [OPENCLAW_ENTRY, 'acp', '--session', sessionKey, '--reset-session'], {
     cwd,
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -200,9 +301,9 @@ async function runAttempt({ cwd, instruction, sessionKey, timeoutMs, thinking, a
           fs: { readTextFile: true, writeTextFile: true },
           terminal: true,
         },
-        clientInfo: { name: 'openclaw-listen-acp-runner', version: '0.3.0' },
+        clientInfo: { name: 'openclaw-listen-acp-runner', version: '0.4.0' },
       }),
-      Math.min(timeoutMs || DEFAULT_INIT_TIMEOUT_MS, DEFAULT_INIT_TIMEOUT_MS),
+      Math.min(timeoutMs || 30000, 30000),
       'ACP initialize',
     );
 
@@ -216,7 +317,7 @@ async function runAttempt({ cwd, instruction, sessionKey, timeoutMs, thinking, a
           prefixCwd: false,
         },
       }),
-      Math.min(timeoutMs || DEFAULT_INIT_TIMEOUT_MS, DEFAULT_INIT_TIMEOUT_MS),
+      Math.min(timeoutMs || 30000, 30000),
       'ACP newSession',
     );
 
@@ -276,6 +377,7 @@ const sessionKey = args['session-key'] || `agent:listen-v2:job:${Date.now()}`;
 const timeoutMs = args['timeout-ms'] ? Number(args['timeout-ms']) : undefined;
 const thinking = args.thinking || undefined;
 const attempts = args.attempts ? Math.max(1, Number(args.attempts)) : DEFAULT_ATTEMPTS;
+const spawnViaCli = args['spawn-via-cli'] !== 'false';
 
 if (!instruction.trim()) {
   console.error(JSON.stringify({ ok: false, error: 'instruction is required' }));
@@ -283,8 +385,57 @@ if (!instruction.trim()) {
 }
 
 let lastResult = null;
-for (let attempt = 1; attempt <= attempts; attempt += 1) {
-  const result = await runAttempt({ cwd, instruction, sessionKey, timeoutMs, thinking, attempt });
+
+// Try spawn first if requested, then fall back to direct ACP
+if (spawnViaCli) {
+  try {
+    console.error('[acp-spawn-wrapper] Attempting to spawn ACP session via CLI...');
+    const spawnedKey = await runAcpSpawnViaCli({
+      cwd,
+      instruction,
+      agentId: 'main',
+      mode: 'persistent',
+      label: 'listen-v2',
+      timeoutMs,
+      thinking,
+    });
+    console.error('[acp-spawn-wrapper] ACP spawn successful, sessionKey:', spawnedKey);
+    const result = await runAttempt({
+      cwd,
+      instruction,
+      sessionKey: spawnedKey,
+      timeoutMs,
+      thinking,
+      attempt: 1,
+      agentId: 'main',
+    });
+    if (result.ok) {
+      console.log(JSON.stringify(result));
+      process.exit(0);
+    }
+    lastResult = result;
+  } catch (err) {
+    console.error('[acp-spawn-wrapper] ACP spawn failed, falling back to direct ACP:', err.message);
+    lastResult = {
+      ok: false,
+      attempt: 1,
+      error: `acp spawn failed: ${err.message}`,
+      sessionKey,
+    };
+  }
+}
+
+// Fallback to direct ACP if spawn failed or not requested
+for (let attempt = spawnViaCli ? 2 : 1; attempt <= attempts; attempt += 1) {
+  const result = await runAttempt({
+    cwd,
+    instruction,
+    sessionKey,
+    timeoutMs,
+    thinking,
+    attempt,
+    agentId: 'main',
+  });
   if (result.ok) {
     console.log(JSON.stringify(result));
     process.exit(0);
