@@ -13,7 +13,7 @@ This component is complementary to the existing job-server flows:
 - accepts jobs over HTTP
 - stores job state in YAML
 - spawns an async worker per job
-- runs work through the local OpenClaw runtime
+- runs work through the local OpenClaw runtime (`openclaw agent --agent main --local` by default)
 - optionally delivers friendly responses back to a chat channel/target via OpenClaw delivery
 
 ## Current v1 behavior
