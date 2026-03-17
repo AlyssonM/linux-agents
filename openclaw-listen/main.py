@@ -43,7 +43,7 @@ class Delivery(BaseModel):
 
 
 class Execution(BaseModel):
-    strategy: Literal["auto", "inline", "subagent", "acp"] = "auto"
+    strategy: Literal["auto", "subagent"] = "auto"
     timeout_seconds: int = Field(default=900, ge=30, le=7200)
     thinking: Literal["off", "minimal", "low", "medium", "high", "xhigh"] | None = None
     agent: str | None = None
@@ -74,7 +74,8 @@ def create_job(req: JobRequest):
     job_id = uuid4().hex[:8]
     job_file = JOBS_DIR / f"{job_id}.yaml"
     requested_strategy = req.execution.strategy
-    resolved_strategy = "acp" if requested_strategy in {"auto", "inline", "subagent", "acp"} else "acp"
+    # All strategies resolve to subagent
+    resolved_strategy = "subagent"
 
     data = {
         "id": job_id,

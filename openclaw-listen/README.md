@@ -6,21 +6,21 @@ This component is complementary to the existing job-server flows:
 
 - `rpi-job/` = simple generic subprocess shell jobs
 - `listen/` = external agent CLI runtime (`codex exec` + tmux)
-- `openclaw-listen/` = OpenClaw-native runtime via `openclaw agent`
+- `openclaw-listen/` = OpenClaw-native runtime via subagent
 
 ## What it does
 
 - accepts jobs over HTTP
 - stores job state in YAML
 - spawns an async worker per job
-- runs work through the local OpenClaw runtime (`openclaw agent --agent main --local` by default)
+- runs work through the local OpenClaw agent (`openclaw agent --message`)
 - optionally delivers friendly responses back to a chat channel/target via OpenClaw delivery
 
-## Current v1 behavior
+## Current behavior
 
-- `execution.strategy=auto` resolves to `acp`
-- `inline` and `subagent` are currently normalized onto the ACP-backed runner in v2
-- `acp` is the native execution path for this component
+- `execution.strategy=auto` resolves to `subagent`
+- all strategies (`auto`, `subagent`) use the subagent execution path
+- each job runs in an isolated Python subprocess that calls `openclaw agent`
 - cancellation is best-effort and currently targets the worker process
 - delivery uses OpenClaw's `--reply-channel` and `--reply-to` flags; `delivery.reply_to` is stored as metadata only for now
 
@@ -47,7 +47,7 @@ uvicorn main:app --host 0.0.0.0 --port 7610
 
 `POST /jobs` returns HTTP `202` with both `id` and `job_id`, plus `status_url`, to stay convenient for machines and humans.
 
-`GET /jobs` supports a small set of filters in v1:
+`GET /jobs` supports a small set of filters:
 
 - `archived=true`
 - `status=<queued|planning|running|succeeded|failed|cancelled>`
@@ -58,49 +58,120 @@ uvicorn main:app --host 0.0.0.0 --port 7610
 ```json
 {
   "instruction": "Abra o Chromium e me diga o que está aberto na tela",
-  "execution": { "strategy": "auto", "timeout_seconds": 900 },
-  "source": { "type": "rest" },
-  "delivery": { "mode": "poll", "send_result": false }
-}
-```
-
-## Delivery example (Telegram)
-
-```json
-{
-  "instruction": "Resuma o status atual",
+  "execution": {
+    "strategy": "auto",
+    "timeout_seconds": 120,
+    "thinking": "low"
+  },
   "source": {
     "type": "telegram",
-    "channel": "telegram",
     "chat_id": "1129943309",
     "message_id": "123"
   },
   "delivery": {
     "mode": "reply",
-    "send_result": true,
     "channel": "telegram",
-    "target": "1129943309",
     "reply_to": "123"
   }
 }
 ```
 
-In the current CLI integration, `target` is what maps to OpenClaw's `--reply-to` destination override. `reply_to` remains useful metadata for future channel-specific reply threading.
+## Design goals
 
-## Requirements
+- Isolated jobs via Python subprocesses (one worker per job)
+- Poll-based by default, with optional push delivery for chat integration
+- FastAPI async workers (one worker process per job)
+- YAML job state on disk (simple, debuggable)
+- Direct OpenClaw CLI invocation via `openclaw agent`
 
-- `openclaw` CLI installed and working locally
-- local model/runtime configuration available for `openclaw agent --local`
-- network access if the configured model provider needs it
+## Architecture
 
-## Notes
+```
+openclaw-listen/
+├── main.py          # FastAPI app (REST API)
+├── worker.py        # Job worker (spawns subagent subprocess)
+├── jobs/            # Job state YAML files
+└── archived/        # Completed jobs
+```
 
-v1 is intentionally pragmatic:
+### Job lifecycle
 
-- YAML-backed storage
-- async subprocess worker model
-- execution via a per-job ACP subprocess and isolated session key
-- explicit metadata for source and delivery
-- simple strategy resolution
+1. HTTP POST to `/jobs` creates job YAML
+2. `main.py` spawns `worker.py <job_id>` subprocess
+3. Worker reads job YAML
+4. Worker creates temporary Python script
+5. Python script calls `openclaw agent --message <instruction>`
+6. OpenClaw agent executes instruction
+7. Result captured and written to job YAML
+8. HTTP GET polls job status until completion
+9. Optional: delivery back to chat channel
 
-It is not trying to replace OpenClaw gateway or distributed orchestration.
+## Concurrency
+
+By default, multiple jobs run in parallel (one worker process per job).
+
+The FastAPI server itself is async, but job execution is synchronous per worker.
+
+No limit on concurrent jobs is enforced by `openclaw-listen` itself; it's up to you to set limits:
+
+- Add a semaphore in `main.py` before spawning workers
+- Add a queue system (e.g., Redis) if you need distributed job processing
+- Use system resource limits (ulimit, cgroups) if running many workers in parallel
+
+## Testing
+
+```bash
+# Create a test job
+curl -X POST http://localhost:7610/jobs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "instruction": "List the files in the current directory",
+    "execution": {"strategy": "auto", "timeout_seconds": 30}
+  }'
+
+# Check job status
+curl http://localhost:7610/jobs/<id>
+```
+
+## Deployment
+
+### Systemd service
+
+```ini
+[Unit]
+Description=openclaw-listen job server
+After=network.target
+
+[Service]
+Type=simple
+User=alyssonpi
+WorkingDirectory=/home/alyssonpi/.openclaw/workspace/linux-agents/openclaw-listen
+Environment="PATH=/home/alyssonpi/.openclaw/workspace/linux-agents/.venv/bin"
+ExecStart=/home/alyssonpi/.openclaw/workspace/linux-agents/.venv/bin/python main.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable with:
+
+```bash
+sudo ln -s /etc/systemd/system/openclaw-listen.service \
+  ~/.config/systemd/user/openclaw-listen.service
+systemctl --user daemon-reload
+systemctl --user enable openclaw-listen
+systemctl --user start openclaw-listen
+```
+
+## Future work
+
+- [ ] Add worker pool / concurrency limits
+- [ ] Implement real delivery integration (not just metadata)
+- [ ] Add job priority queue
+- [ ] Support for streaming results (Server-Sent Events)
+- [ ] Metrics / monitoring (Prometheus)
+- [ ] Web UI for job management
+- [ ] Retry logic for transient failures
+- [ ] Better error messages and debugging tools

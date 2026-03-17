@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-import os
 import signal
 import subprocess
 import sys
@@ -13,10 +11,6 @@ import yaml
 BASE_DIR = Path(__file__).parent
 JOBS_DIR = BASE_DIR / "jobs"
 REPO_ROOT = BASE_DIR.parent
-ACP_RUNNER = BASE_DIR / "acp_runner.mjs"
-NODE_BIN = "/usr/bin/node"
-
-_CHILD: subprocess.Popen[str] | None = None
 _CANCELLED = False
 
 
@@ -48,41 +42,96 @@ def _on_signal(signum, frame):  # noqa: ARG001
         _CHILD.terminate()
 
 
-def _build_runner_cmd(job: dict, job_id: str) -> list[str]:
-    execution = job.get("execution") or {}
+def _run_subagent(job: dict, job_id: str) -> dict:
+    """Execute job using inline Python (subagent subprocess)."""
+    import time
+
     instruction = job.get("instruction") or ""
+    execution = job.get("execution") or {}
     timeout_seconds = int(execution.get("timeout_seconds") or 900)
-    thinking = execution.get("thinking")
-    cmd = [
-        NODE_BIN,
-        str(ACP_RUNNER),
-        "--instruction",
-        instruction,
-        "--cwd",
-        str(REPO_ROOT),
-        "--session-key",
-        _session_key_for_job(job_id),
-        "--timeout-ms",
-        str(timeout_seconds * 1000),
-        "--spawn-via-cli",
-    ]
-    if thinking:
-        cmd += ["--thinking", thinking]
-    return cmd
 
+    _append_update(job, "Running job with subagent")
 
-def _parse_runner_output(stdout: str, stderr: str) -> tuple[str, dict]:
-    lines = [line.strip() for line in stdout.splitlines() if line.strip()]
-    if not lines:
-        raise RuntimeError(stderr.strip() or "ACP runner returned no output")
-    last = lines[-1]
-    data = json.loads(last)
-    message = (data.get("message") or "").strip() if isinstance(data, dict) else ""
-    return message, data
+    # Build inline subagent script that calls OpenClaw agent
+    subagent_script = f"""#!/usr/bin/env python3
+import sys
+import subprocess
+
+instruction = '''{instruction}'''
+
+# Call OpenClaw agent with the instruction
+cmd = [
+    "/usr/bin/node",
+    "/home/alyssonpi/.npm-global/lib/node_modules/openclaw/openclaw.mjs",
+    "agent",
+    "--agent", "main",
+    "--message", instruction,
+]
+
+result = subprocess.run(cmd, capture_output=True, text=True, timeout={timeout_seconds})
+
+if result.returncode == 0:
+    print(result.stdout)
+    sys.exit(0)
+else:
+    print(f"Error: {{result.stderr}}", file=sys.stderr)
+    sys.exit(result.returncode)
+"""
+
+    # Write temporary script
+    script_path = BASE_DIR / f"_{job_id}_subagent.py"
+    script_path.write_text(subagent_script)
+
+    _append_update(job, f"Executing subagent: {script_path.name}")
+
+    start_time = time.time()
+    child = subprocess.Popen(
+        [sys.executable, str(script_path)],
+        cwd=str(REPO_ROOT),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+    try:
+        stdout, stderr = child.communicate(timeout=timeout_seconds)
+        elapsed = time.time() - start_time
+
+        # Cleanup
+        script_path.unlink(missing_ok=True)
+
+        if child.returncode == 0:
+            job["status"] = "succeeded"
+            job["result"] = {
+                "summary": stdout.strip()[:4000],
+                "message": stdout.strip(),
+                "exit_code": 0,
+            }
+            job.setdefault("runtime", {})["elapsed_seconds"] = round(elapsed, 2)
+            _append_update(job, f"Subagent completed in {elapsed:.1f}s")
+        else:
+            job["status"] = "failed"
+            job["error"] = {
+                "message": stderr.strip()[:4000] or f"Subagent exited with code {child.returncode}",
+            }
+            job["result"] = {
+                "exit_code": child.returncode,
+                "stderr": stderr.strip()[:4000],
+                "stdout": stdout.strip()[:4000],
+            }
+            _append_update(job, f"Subagent failed with code {child.returncode}")
+
+    except subprocess.TimeoutExpired:
+        child.kill()
+        script_path.unlink(missing_ok=True)
+        job["status"] = "failed"
+        job["error"] = {"message": f"Subagent timed out after {timeout_seconds}s"}
+        _append_update(job, f"Subagent timed out after {timeout_seconds}s")
+
+    return job
 
 
 def main(job_id: str) -> None:
-    global _CHILD
     signal.signal(signal.SIGTERM, _on_signal)
     signal.signal(signal.SIGINT, _on_signal)
 
@@ -92,78 +141,18 @@ def main(job_id: str) -> None:
 
     job = _read_job(job_file)
     strategy = ((job.get("execution") or {}).get("strategy")) or "auto"
-    resolved_strategy = "acp"
+
+    # All strategies resolve to subagent
+    resolved_strategy = "subagent"
+
     job.setdefault("execution", {})["resolved_strategy"] = resolved_strategy
     job.setdefault("runtime", {})["session_key"] = _session_key_for_job(job_id)
     _append_update(job, f"Execution strategy resolved to: {resolved_strategy}")
     job["status"] = "running"
     _write_job(job_file, job)
 
-    cmd = _build_runner_cmd(job, job_id)
-    _append_update(job, "Dispatching job to OpenClaw ACP runtime")
-    _write_job(job_file, job)
-
-    try:
-        _CHILD = subprocess.Popen(cmd, cwd=str(BASE_DIR), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        stdout, stderr = _CHILD.communicate()
-    except Exception as exc:
-        job = _read_job(job_file)
-        job["status"] = "failed"
-        job["error"] = {"message": str(exc)}
-        _append_update(job, f"Runner spawn failed: {exc}")
-        _write_job(job_file, job)
-        return
-
-    job = _read_job(job_file)
-    job.setdefault("result", {})
-
-    if _CANCELLED:
-        job["status"] = "cancelled"
-        job["error"] = {"message": "Job cancelled"}
-        _append_update(job, "ACP worker cancelled")
-        _write_job(job_file, job)
-        return
-
-    if _CHILD.returncode == 0:
-        try:
-            message, payload = _parse_runner_output(stdout, stderr)
-            job["status"] = "succeeded"
-            job["result"]["summary"] = message[:4000]
-            job["result"]["message"] = message
-            job["result"]["stop_reason"] = payload.get("stopReason")
-            job["runtime"]["session_id"] = payload.get("sessionId")
-            job["runtime"]["session_key"] = payload.get("sessionKey") or job["runtime"].get("session_key")
-            job["runtime"]["tool_events"] = payload.get("toolEvents", 0)
-            if payload.get("updates"):
-                job["runtime"]["acp_updates"] = payload.get("updates")
-            _append_update(job, "OpenClaw ACP runtime completed successfully")
-        except Exception as exc:
-            job["status"] = "failed"
-            job["error"] = {"message": f"Failed to parse ACP runner output: {exc}"}
-            job["result"]["stderr"] = stderr.strip()[:4000]
-            _append_update(job, "ACP runtime returned unparseable output")
-    else:
-        job["status"] = "failed"
-        err_message = stderr.strip() or stdout.strip() or f"ACP runner exited with code {_CHILD.returncode}"
-        job["error"] = {"message": err_message[:4000]}
-        job["result"]["stderr"] = stderr.strip()[:4000]
-        payload = None
-        try:
-            _, payload = _parse_runner_output(stdout, stderr)
-        except Exception:
-            payload = None
-        if isinstance(payload, dict):
-            if payload.get("partialMessage"):
-                job["result"]["message"] = str(payload.get("partialMessage"))[:4000]
-                job["result"]["summary"] = str(payload.get("partialMessage"))[:4000]
-            if payload.get("ignoredStdoutLines"):
-                job.setdefault("runtime", {})["ignored_stdout_lines"] = payload.get("ignoredStdoutLines")
-            if payload.get("stderr"):
-                job["result"]["stderr"] = str(payload.get("stderr"))[:4000]
-        _append_update(job, "OpenClaw ACP runtime failed")
-
-    job["result"]["exit_code"] = _CHILD.returncode
-    job["updated_at"] = _now()
+    # Execute with subagent
+    job = _run_subagent(job, job_id)
     _write_job(job_file, job)
 
 
