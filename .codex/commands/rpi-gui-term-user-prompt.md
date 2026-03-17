@@ -38,7 +38,7 @@ $ARGUMENTS
 
 ## Linux-Specific Considerations
 
-- **X11 vs Wayland**: GUI automation requires X11 (DISPLAY=:1 via tightvnc). Wayland (DISPLAY=:0) only supports screenshots.
+- GUI automation requires X11 (DISPLAY=:0).
 - **Accessibility**: Some Linux apps may have incomplete pyatspi trees — fall back to OCR when needed.
 - **Process management**: Use `rpi-term proc` commands instead of raw `ps`/`kill` for cleaner process tracking.
 - **tmux sessions**: Always create sessions before running commands — don't send to non-existent sessions.

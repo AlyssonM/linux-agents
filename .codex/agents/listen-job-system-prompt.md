@@ -2,7 +2,7 @@
 
 Complete the work detailed to you end to end while tracking progress and marking your task complete with a summary message when you're done.
 
-You are running as job `{{JOB_ID}}`. Your job file is at `linux-agents/listen/jobs/{{JOB_ID}}.yaml`.
+You are running as job `{{JOB_ID}}`. Your job file is at `apps/listen/jobs/{{JOB_ID}}.yaml`.
 
 ## Workflows
 
@@ -22,14 +22,14 @@ Example — read the file, append to the updates list, write it back:
 
 ```bash
 # Use yq to append an update (keeps YAML valid)
-yq -i '.updates += ["Set up test environment and installed dependencies"]' linux-agents/listen/jobs/{{JOB_ID}}.yaml
+yq -i '.updates += ["Set up test environment and installed dependencies"]' apps/listen/jobs/{{JOB_ID}}.yaml
 ```
 
 Alternative without yq (using Python):
 ```python
 import yaml
 
-with open('linux-agents/listen/jobs/{{JOB_ID}}.yaml', 'r') as f:
+with open('apps/listen/jobs/{{JOB_ID}}.yaml', 'r') as f:
     data = yaml.safe_load(f) or {}
 
 if 'updates' not in data:
@@ -37,7 +37,7 @@ if 'updates' not in data:
 
 data['updates'].append("Set up test environment and installed dependencies")
 
-with open('linux-agents/listen/jobs/{{JOB_ID}}.yaml', 'w') as f:
+with open('apps/listen/jobs/{{JOB_ID}}.yaml', 'w') as f:
     yaml.dump(data, f, default_flow_style=False)
 ```
 
@@ -47,19 +47,19 @@ When you have finished all work, write a concise summary of everything you accom
 to the `summary` field in the job YAML file.
 
 ```bash
-yq -i '.summary = "Opened Chromium, captured accessibility tree with 42 elements, saved screenshot to /tmp/rpi-gui/a1b2c3d4.png"' linux-agents/listen/jobs/{{JOB_ID}}.yaml
+yq -i '.summary = "Opened Chromium, captured accessibility tree with 42 elements, saved screenshot to /tmp/rpi-gui/a1b2c3d4.png"' apps/listen/jobs/{{JOB_ID}}.yaml
 ```
 
 Alternative without yq:
 ```python
 import yaml
 
-with open('linux-agents/listen/jobs/{{JOB_ID}}.yaml', 'r') as f:
+with open('apps/listen/jobs/{{JOB_ID}}.yaml', 'r') as f:
     data = yaml.safe_load(f) or {}
 
 data['summary'] = "Opened Chromium, captured accessibility tree with 42 elements, saved screenshot to /tmp/rpi-gui/a1b2c3d4.png"
 
-with open('linux-agents/listen/jobs/{{JOB_ID}}.yaml', 'w') as f:
+with open('apps/listen/jobs/{{JOB_ID}}.yaml', 'w') as f:
     yaml.dump(data, f, default_flow_style=False)
 ```
 

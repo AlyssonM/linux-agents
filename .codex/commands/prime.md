@@ -13,10 +13,10 @@ Understand the linux-agents monorepo: a Linux automation framework for Raspberry
    - READ `pyproject.toml` (root)
 
 2. Read each tool's config:
-   - READ `rpi-gui/pyproject.toml`
-   - READ `rpi-term/pyproject.toml`
-   - READ `rpi-job/pyproject.toml`
-   - READ `rpi-client/pyproject.toml`
+   - READ `apps/rpi-gui/pyproject.toml`
+   - READ `apps/rpi-term/pyproject.toml`
+   - READ `apps/rpi-job/pyproject.toml`
+   - READ `apps/rpi-client/pyproject.toml`
 
 3. Read the agent skills and prompts:
    - READ `.codex/skills/rpi-gui/SKILL.md`
@@ -27,10 +27,10 @@ Understand the linux-agents monorepo: a Linux automation framework for Raspberry
    - READ `.codex/commands/rpi-gui-term-user-prompt.md`
 
 4. Read entry points:
-   - READ `rpi-gui/src/rpi_gui/__init__.py`
-   - READ `rpi-term/src/rpi_term/main.py`
-   - READ `rpi-job/src/rpi_job/main.py`
-   - READ `rpi-client/src/rpi_client/main.py`
+   - READ `apps/rpi-gui/src/rpi_gui/__init__.py`
+   - READ `apps/rpi-term/rpi_term/main.py`
+   - READ `apps/rpi-job/rpi_job/main.py`
+   - READ `apps/rpi-client/rpi_client/main.py`
 
 5. Read E2E test specs to understand usage patterns:
    - READ `specs/README.md`

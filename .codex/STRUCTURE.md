@@ -31,7 +31,7 @@ linux-agents/.codex/
 
 **Key Variables:**
 - `{{JOB_ID}}` - Job identifier (8-character hex)
-- Job file location: `linux-agents/rpi-job/jobs/{{JOB_ID}}.yaml`
+- Job file location: `apps/rpi-job/jobs/{{JOB_ID}}.yaml`
 
 ## Commands
 

@@ -196,10 +196,10 @@ Watch the jobs directory:
 
 ```bash
 # Watch for new jobs
-watch -n 1 'ls -la linux-agents/rpi-job/jobs/'
+watch -n 1 'ls -la apps/rpi-job/jobs/'
 
 # Tail job logs
-tail -f linux-agents/rpi-job/jobs/<job_id>.yaml
+tail -f apps/rpi-job/jobs/<job_id>.yaml
 ```
 
 ## Error Handling

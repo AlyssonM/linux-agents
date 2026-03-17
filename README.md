@@ -19,8 +19,8 @@ Terminal and GUI Automation Stack for Linux ARM64 (Raspberry Pi 4), powered by O
 - **Commands**: `session create/attach/kill/list`, `run`, `send`, `logs`, `poll`, `proc`, `fanout`.
 
 ### 3. 📥 Job Servers
-- **`openclaw-listen` (Recommended)**: REST API server for sub-agent execution with full state management.
-- **`listen`**: High-level agent runtime (Codex/Pi/OpenClaw).
+- **`openclaw-listen`**: REST API server for openclaw sub-agent execution with full state management.
+- **`listen` (Recommended)**: High-level agent runtime (Codex/Pi/Opencode).
 - **`rpi-job`**: Lightweight subprocess-based job runner.
 
 ---
