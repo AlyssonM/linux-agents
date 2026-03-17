@@ -1,51 +1,43 @@
-# listen
+# listen - Job Server (port 7600)
 
-Codex-focused HTTP job server for `linux-agents`.
+Multi-agent job server supporting **codex** and **opencode**.
 
-This is the Linux/Raspberry Pi adaptation of `mac-mini-agent/apps/listen/`, but:
+## Agents
 
-- uses **Codex CLI** instead of Claude
-- uses prompts from **`.codex/`**
-- uses **tmux on Linux** instead of Terminal.app automation
-- has **no justfile dependency**
+| Agent | Status | Notes |
+|-------|--------|-------|
+| **codex** | ⚠️ API limited | OpenAI reset until Mar 18, 2026 |
+| **claude** | ✅ Available | Alias for opencode |
+| **opencode** | ✅ Working | **Recommended** |
 
-## What it does
-
-- accepts jobs over HTTP
-- stores job state in YAML
-- spawns a worker per job
-- runs `codex exec` inside a tmux session
-- lets the Codex agent use `rpi-gui` and `rpi-term`
-- tracks status, updates, summary, exit code, and duration
-
-## Run
+## Usage
 
 ```bash
-cd listen
-uv run python main.py
+# Start server
+cd ~/Github/linux-agents
+.venv/bin/python listen/main.py
+
+# Submit job
+curl -X POST http://localhost:7600/job \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "minha tarefa", "agent": "opencode"}'
+
+# Check job
+curl http://localhost:7600/job/<job_id>
+
+# List jobs
+curl http://localhost:7600/jobs
 ```
 
-Server starts on port `7600` by default.
+## Systemd Service
 
-## Endpoints
+```bash
+systemctl --user start linux-agents-listen
+systemctl --user status linux-agents-listen
+```
 
-- `POST /job` — submit a new job
-- `GET /job/{id}` — fetch full YAML job
-- `GET /jobs` — list jobs summary
-- `POST /jobs/clear` — archive jobs
-- `DELETE /job/{id}` — stop a running job
+## Related
 
-## Requirements
-
-- `codex` installed and authenticated
-- `tmux` installed
-- repo checked out locally
-- `.codex/agents/job-system-prompt.md` present
-- `.codex/commands/rpi-gui-term-user-prompt.md` present
-
-## Notes
-
-This app is intentionally separate from `rpi-job/`.
-
-- `rpi-job/` = simple generic subprocess shell job server
-- `listen/` = agent-oriented Codex job server, closer to the original Mac Mini Agent concept
+- **openclaw-listen** (port 7610) - Dedicated OpenClaw agent server
+- **AGENTS.md** - Detailed agent documentation
+- **DEBUG.md** - Debug notes and troubleshooting
