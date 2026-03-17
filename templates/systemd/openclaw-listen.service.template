@@ -5,7 +5,7 @@ After=network.target
 [Service]
 Type=simple
 User={{USER}}
-WorkingDirectory={{WORKING_DIRECTORY}}/openclaw-listen
+WorkingDirectory={{WORKING_DIRECTORY}}/apps/openclaw-listen
 ExecStart={{PYTHON_VENV}} main.py
 Restart=always
 

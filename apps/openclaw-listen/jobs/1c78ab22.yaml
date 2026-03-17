@@ -1,0 +1,44 @@
+id: 1c78ab22
+kind: task
+status: failed
+created_at: '2026-03-17T15:31:46Z'
+updated_at: '2026-03-17T15:32:47Z'
+instruction: Say LOCK_OK
+source:
+  type: rest
+  channel: null
+  chat_id: null
+  message_id: null
+  user_id: null
+  request_id: null
+delivery:
+  mode: poll
+  send_result: false
+  channel: null
+  target: null
+  reply_to: null
+  thread_id: null
+  format_style: compact
+execution:
+  strategy: auto
+  timeout_seconds: 60
+  thinking: null
+  agent: null
+  resolved_strategy: subagent
+input: {}
+runtime:
+  pid: 151793
+  worker: openclaw-listen/worker.py
+  session_key: agent:listen-v2:job:1c78ab22
+updates:
+- Job accepted and worker spawned
+- 'Execution strategy resolved to: subagent'
+- Running job with subagent
+- 'Executing subagent: _1c78ab22_subagent.py'
+- Subagent timed out after 60s
+artifacts: []
+result:
+  summary: ''
+  message: ''
+error:
+  message: Subagent timed out after 60s

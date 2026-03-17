@@ -21,7 +21,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 
 # Install components
-pip install -e rpi-gui -e rpi-term -e rpi-job -e rpi-client
+pip install -e apps/rpi-gui -e apps/rpi-term -e apps/rpi-job -e apps/rpi-client
 ```
 
 ## 3. Basic Usage Examples
@@ -59,7 +59,7 @@ The job server allows you to queue tasks for different agents (Codex, Pi, OpenCl
 
 ```bash
 # Start the server (runs on port 7610 by default)
-cd openclaw-listen
+cd apps/openclaw-listen
 python main.py
 ```
 

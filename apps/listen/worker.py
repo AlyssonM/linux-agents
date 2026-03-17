@@ -15,7 +15,7 @@ POLL_INTERVAL = 2.0
 
 BASE_DIR = Path(__file__).parent
 JOBS_DIR = BASE_DIR / "jobs"
-REPO_ROOT = BASE_DIR.parent
+REPO_ROOT = BASE_DIR.parent.parent
 CODEX_SYSTEM_PROMPT = REPO_ROOT / ".opencode" / "agents" / "job-system-prompt.md"
 CODEX_USER_PROMPT = REPO_ROOT / ".opencode" / "commands" / "rpi-gui-term-user-prompt.md"
 

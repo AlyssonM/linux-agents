@@ -8,7 +8,7 @@ Type=simple
 User={{USER}}
 WorkingDirectory={{WORKING_DIRECTORY}}
 Environment=DISPLAY=:0
-ExecStart={{PYTHON_VENV}} {{WORKING_DIRECTORY}}/listen/main.py
+ExecStart={{PYTHON_VENV}} {{WORKING_DIRECTORY}}/apps/listen/main.py
 Restart=always
 RestartSec=3
 

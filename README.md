@@ -39,7 +39,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 
 # Install all components in editable mode
-pip install -e rpi-gui -e rpi-term -e rpi-job -e rpi-client
+pip install -e apps/rpi-gui -e apps/rpi-term -e apps/rpi-job -e apps/rpi-client
 ```
 
 ---
@@ -70,7 +70,7 @@ rpi-gui airdrop --target "MyPhone" --json
 ### 3. Job Server (REST API)
 ```bash
 # Start the server
-cd openclaw-listen && python main.py
+cd apps/openclaw-listen && python main.py
 
 # Submit a job via CLI
 rpi-client start http://localhost:7610 "Write a python script to monitor CPU" --agent pi

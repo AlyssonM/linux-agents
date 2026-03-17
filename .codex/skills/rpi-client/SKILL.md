@@ -5,7 +5,7 @@ description: CLI client for rpi-job server. Use rpi-client to submit jobs, poll 
 
 # rpi-client — Job Client (Direct)
 
-Run from: `cd linux-agents/rpi-client && rpi-client <command>`
+Run from: `cd linux-agents/apps/rpi-client && rpi-client <command>`
 
 rpi-client is a CLI tool for interacting with rpi-job servers.
 

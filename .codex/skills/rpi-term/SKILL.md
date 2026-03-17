@@ -5,7 +5,7 @@ description: Terminal automation CLI for AI agents. Use rpi-term to create tmux 
 
 # rpi-term — Terminal Automation via tmux
 
-Run from: `cd linux-agents/rpi-term && rpi-term <command>`
+Run from: `cd linux-agents/apps/rpi-term && rpi-term <command>`
 
 rpi-term gives you full programmatic control over tmux sessions — creating terminals, running commands, reading output, and orchestrating parallel workloads.
 

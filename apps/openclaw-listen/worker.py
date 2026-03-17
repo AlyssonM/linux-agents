@@ -10,7 +10,7 @@ import yaml
 
 BASE_DIR = Path(__file__).parent
 JOBS_DIR = BASE_DIR / "jobs"
-REPO_ROOT = BASE_DIR.parent
+REPO_ROOT = BASE_DIR.parent.parent
 _CANCELLED = False
 
 

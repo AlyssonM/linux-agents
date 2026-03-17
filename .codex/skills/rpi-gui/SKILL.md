@@ -5,7 +5,7 @@ description: Linux GUI automation CLI for AI agents. Use rpi-gui to see the scre
 
 # rpi-gui — Linux GUI Automation
 
-Run from: `cd linux-agents/rpi-gui && rpi-gui <command>`
+Run from: `cd linux-agents/apps/rpi-gui && rpi-gui <command>`
 
 Run `rpi-gui --help` and `rpi-gui <command> --help` to learn each command's flags.
 

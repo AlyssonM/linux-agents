@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User={{USER}}
 WorkingDirectory={{WORKING_DIRECTORY}}
-ExecStart={{PYTHON_VENV}} {{WORKING_DIRECTORY}}/rpi-job/rpi_job/main.py
+ExecStart={{PYTHON_VENV}} {{WORKING_DIRECTORY}}/apps/rpi-job/rpi_job/main.py
 Restart=always
 
 [Install]
