@@ -1,0 +1,13 @@
+[Unit]
+Description=OpenClaw Listen REST API Server
+After=network.target
+
+[Service]
+Type=simple
+User={{USER}}
+WorkingDirectory={{WORKING_DIRECTORY}}/openclaw-listen
+ExecStart={{PYTHON_VENV}} main.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

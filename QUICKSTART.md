@@ -1,40 +1,77 @@
-# Quick Start (Linux ARM64 Agent Stack)
+# Quick Start Guide
 
-## 1) Setup
+Get up and running with the Linux Agents stack in less than 5 minutes.
+
+## 1. Environment Preparation
+
+Ensure you are in an **X11 session** (required for GUI typing/clicking):
+```bash
+echo $DISPLAY          # Should be :0
+echo $XDG_SESSION_TYPE # Should be x11
+```
+
+## 2. Installation
 
 ```bash
+git clone https://github.com/AlyssonM/linux-agents.git
 cd linux-agents
+
+# Create Virtual Environment
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e rpi-gui[dev] -e rpi-term[dev] -e rpi-job[dev] -e rpi-client[dev]
+
+# Install components
+pip install -e rpi-gui -e rpi-term -e rpi-job -e rpi-client
 ```
 
-## 2) Start job server
+## 3. Basic Usage Examples
+
+### Terminal Control
+```bash
+# Start a persistent session
+rpi-term session create --name dev-server
+
+# Run commands
+rpi-term run "python -m http.server 8080" --session dev-server
+```
+
+### GUI Interaction
+```bash
+# Capture screen and run OCR
+rpi-gui see --ocr --json
+
+# Click the center of the screen
+rpi-gui click --x 960 --y 540 --json
+
+# Type into the focused window
+rpi-gui type "Hello from the AI" --enter --json
+```
+
+### File Transfer (LocalSend)
+```bash
+# Send the current screen to another device on the network
+rpi-gui airdrop --target "Smartphone" --json
+```
+
+## 4. Running a Job Server
+
+The job server allows you to queue tasks for different agents (Codex, Pi, OpenClaw).
 
 ```bash
-python -m rpi_job.main
+# Start the server (runs on port 7610 by default)
+cd openclaw-listen
+python main.py
 ```
 
-## 3) Create and inspect a job
-
+In another terminal:
 ```bash
-rpi-client start http://127.0.0.1:7600 "collect system info"
-rpi-client list http://127.0.0.1:7600
-rpi-client latest http://127.0.0.1:7600 -n 1
+# Submit a job
+rpi-client start http://localhost:7610 "Check system health and send report via LocalSend" --agent pi
+
+# Check status
+rpi-client list http://localhost:7610
 ```
 
-## 4) Terminal automation
-
-```bash
-rpi-term session create --name agent-1
-rpi-term run --session agent-1 "echo hello"
-rpi-term logs --session agent-1 --lines 50
-```
-
-## 5) GUI automation
-
-```bash
-rpi-gui see --ocr
-rpi-gui click --x 400 --y 300
-rpi-gui hotkey ctrl+s
-```
+## 5. Next Steps
+- Review [REQUIREMENTS.md](REQUIREMENTS.md) for full system dependencies.
+- Check the `.pi/skills/` directory for a complete command reference.
