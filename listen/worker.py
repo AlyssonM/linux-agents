@@ -231,8 +231,8 @@ def main(job_id: str, prompt: str, agent: str = "codex", model: str = "") -> Non
                         # Skip empty lines
                         if not line:
                             continue
-                        # Skip sentinel
-                        if SENTINEL_PREFIX in line:
+                        # Skip sentinel and its remnants
+                        if SENTINEL_PREFIX in line or ':$?' in line or ':$\'"' in line:
                             continue
                         # Skip command prompts
                         if any(line.strip().startswith(prefix) for prefix in ['$', '>', 'alyssonpi@']):
