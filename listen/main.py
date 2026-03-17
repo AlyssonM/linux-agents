@@ -45,6 +45,7 @@ def create_job(req: JobRequest):
         "id": job_id,
         "status": "running",
         "prompt": req.prompt,
+        "agent": req.agent,
         "model": req.model,
         "created_at": now,
         "pid": 0,
@@ -56,7 +57,7 @@ def create_job(req: JobRequest):
 
     worker_path = BASE_DIR / "worker.py"
     proc = subprocess.Popen(
-        [sys.executable, str(worker_path), job_id, req.prompt, req.model or ""],
+        [sys.executable, str(worker_path), job_id, req.prompt, req.agent, req.model or ""],
         cwd=str(BASE_DIR),
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,

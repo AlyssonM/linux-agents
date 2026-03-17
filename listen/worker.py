@@ -16,8 +16,8 @@ POLL_INTERVAL = 2.0
 BASE_DIR = Path(__file__).parent
 JOBS_DIR = BASE_DIR / "jobs"
 REPO_ROOT = BASE_DIR.parent
-CODEX_SYSTEM_PROMPT = REPO_ROOT / ".codex" / "agents" / "listen-job-system-prompt.md"
-CODEX_USER_PROMPT = REPO_ROOT / ".codex" / "commands" / "rpi-gui-term-user-prompt.md"
+CODEX_SYSTEM_PROMPT = REPO_ROOT / ".opencode" / "agents" / "job-system-prompt.md"
+CODEX_USER_PROMPT = REPO_ROOT / ".opencode" / "commands" / "rpi-gui-term-user-prompt.md"
 
 
 def _tmux(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -67,17 +67,8 @@ def _render_prompt(job_id: str, user_prompt: str) -> str:
     return f"{system_prompt}\n\n---\n\n{command_prompt}\n"
 
 
-def main(job_id: str, prompt: str, model: str = "") -> None:
-    job_file = JOBS_DIR / f"{job_id}.yaml"
-    if not job_file.exists():
-        raise SystemExit(f"Job file not found: {job_file}")
-
-    if not CODEX_SYSTEM_PROMPT.exists():
-        raise SystemExit(f"Missing system prompt: {CODEX_SYSTEM_PROMPT}")
-    if not CODEX_USER_PROMPT.exists():
-        raise SystemExit(f"Missing user prompt: {CODEX_USER_PROMPT}")
-
-    session_name = f"job-{job_id}"
+def _run_codex(job_id: str, prompt: str, model: str, session_name: str) -> int:
+    """Run job using codex exec (original implementation)."""
     token = uuid.uuid4().hex[:8]
     prompt_file = Path(f"/tmp/listen-codex-prompt-{job_id}.md")
     output_file = Path(f"/tmp/listen-codex-output-{job_id}.txt")
@@ -97,22 +88,113 @@ def main(job_id: str, prompt: str, model: str = "") -> None:
 
     wrapped = f'{codex_cmd} ; echo "{SENTINEL_PREFIX}{token}:$?"'
 
+    _ensure_session(session_name, str(REPO_ROOT))
+    _send_keys(session_name, wrapped)
+    return _wait_for_sentinel(session_name, token)
+
+
+def _run_openclaw(job_id: str, prompt: str, model: str, session_name: str) -> int:
+    """Run job using OpenClaw agent CLI (same as openclaw-listen)."""
+    token = uuid.uuid4().hex[:8]
+
+    # Build OpenClaw command
+    openclaw_cmd = [
+        "/usr/bin/node",
+        "/home/alyssonpi/.npm-global/lib/node_modules/openclaw/openclaw.mjs",
+        "agent",
+        "--agent", "main",
+        "--message", prompt,
+    ]
+
+    if model:
+        openclaw_cmd.extend(["--model", model])
+
+    # Wrap with sentinel
+    wrapped_cmd = ' '.join(openclaw_cmd) + f' ; echo "{SENTINEL_PREFIX}{token}:$?"'
+
+    _ensure_session(session_name, str(REPO_ROOT))
+    _send_keys(session_name, wrapped_cmd)
+    return _wait_for_sentinel(session_name, token)
+
+
+def _run_opencode(job_id: str, prompt: str, model: str, session_name: str) -> int:
+    """Run job using OpenCode CLI."""
+    token = uuid.uuid4().hex[:8]
+
+    # Build opencode command
+    opencode_bin = Path.home() / ".opencode" / "bin" / "opencode"
+
+    if not opencode_bin.exists():
+        raise FileNotFoundError(f"OpenCode binary not found at {opencode_bin}")
+
+    opencode_cmd = [
+        str(opencode_bin),
+        "run",
+        prompt,
+    ]
+
+    # TODO: Add model support when opencode supports it
+    # if model:
+    #     opencode_cmd.extend(["--model", model])
+
+    # Wrap with sentinel
+    wrapped_cmd = ' '.join([str(c) for c in opencode_cmd]) + f' ; echo "{SENTINEL_PREFIX}{token}:$?"'
+
+    _ensure_session(session_name, str(REPO_ROOT))
+    _send_keys(session_name, wrapped_cmd)
+    return _wait_for_sentinel(session_name, token)
+
+
+# Agent runners mapping
+AGENT_RUNNERS = {
+    "codex": _run_codex,
+    "claude": _run_openclaw,  # claude maps to OpenClaw for now
+    "openclaw": _run_openclaw,
+    "opencode": _run_opencode,
+}
+
+
+def main(job_id: str, prompt: str, agent: str = "codex", model: str = "") -> None:
+    job_file = JOBS_DIR / f"{job_id}.yaml"
+    if not job_file.exists():
+        raise SystemExit(f"Job file not found: {job_id}")
+
+    # Validate prompts exist for codex/openclaw
+    if agent in ["codex", "claude", "openclaw"]:
+        if not CODEX_SYSTEM_PROMPT.exists():
+            raise SystemExit(f"Missing system prompt: {CODEX_SYSTEM_PROMPT}")
+        if not CODED_USER_PROMPT.exists():
+            raise SystemExit(f"Missing user prompt: {CODED_USER_PROMPT}")
+
+    session_name = f"job-{job_id}"
+
+    # Get agent runner
+    runner = AGENT_RUNNERS.get(agent)
+    if not runner:
+        raise SystemExit(f"Unknown agent: {agent}. Available: {', '.join(AGENT_RUNNERS.keys())}")
+
     start_time = time.time()
     data = _read_yaml(job_file)
     data["session"] = session_name
 
-    if model:
-        data.setdefault("updates", []).append(f"Spawned Codex worker in tmux session using model: {model}")
+    # Log which agent is being used
+    if agent == "claude":
+        agent_display = "OpenClaw (claude compatibility mode)"
+    elif agent == "openclaw":
+        agent_display = "OpenClaw agent CLI"
     else:
-        data.setdefault("updates", []).append("Spawned Codex worker in tmux session using default Codex model")
+        agent_display = f"{agent.capitalize()}"
+
+    if model:
+        data.setdefault("updates", []).append(f"Spawned {agent_display} worker using model: {model}")
+    else:
+        data.setdefault("updates", []).append(f"Spawned {agent_display} worker with default model")
 
     _write_yaml(job_file, data)
 
     exit_code = 1
     try:
-        _ensure_session(session_name, str(REPO_ROOT))
-        _send_keys(session_name, wrapped)
-        exit_code = _wait_for_sentinel(session_name, token)
+        exit_code = runner(job_id, prompt, model, session_name)
     except Exception as exc:
         data = _read_yaml(job_file)
         data["status"] = "failed"
@@ -128,10 +210,17 @@ def main(job_id: str, prompt: str, model: str = "") -> None:
             data["exit_code"] = exit_code
             data["duration_seconds"] = duration
             data["completed_at"] = now
+
+            # Try to read output file for codex
+            output_file = Path(f"/tmp/listen-codex-output-{job_id}.txt")
             if output_file.exists() and not data.get("summary"):
                 data["summary"] = output_file.read_text(encoding="utf-8").strip()[:4000]
+
             _write_yaml(job_file, data)
 
+        # Cleanup
+        prompt_file = Path(f"/tmp/listen-codex-prompt-{job_id}.md")
+        output_file = Path(f"/tmp/listen-codex-output-{job_id}.txt")
         prompt_file.unlink(missing_ok=True)
         output_file.unlink(missing_ok=True)
         if _session_exists(session_name):
@@ -139,9 +228,10 @@ def main(job_id: str, prompt: str, model: str = "") -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        raise SystemExit("Usage: worker.py <job_id> <prompt> [model]")
+    if len(sys.argv) < 4:
+        raise SystemExit("Usage: worker.py <job_id> <prompt> <agent> [model]")
     job_id = sys.argv[1]
     prompt = sys.argv[2]
-    model = sys.argv[3] if len(sys.argv) > 3 else ""
-    main(job_id, prompt, model)
+    agent = sys.argv[3]
+    model = sys.argv[4] if len(sys.argv) > 4 else ""
+    main(job_id, prompt, agent, model)
