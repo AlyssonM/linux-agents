@@ -1,3 +1,8 @@
+---
+name: skills-documentation
+description: Documentation for available Linux Agents skills and automation tools.
+---
+
 # Linux Agents Skills
 
 Skills para automação em Linux (Raspberry Pi 4 ARM64), equivalentes às skills do Mac Mini Agent adaptadas para Linux.

@@ -15,8 +15,9 @@ from rpi_gui.commands.send import send_cmd
 @click.option("--file", "-f", multiple=True, type=click.Path(exists=True), help="File(s) to send")
 @click.option("--target", "-t", help="Target device name (partial match)")
 @click.option("--output", type=click.Path(), help="Save screenshot to file before sending")
+@click.option("--json", "output_json", is_flag=True, help="Output results as JSON")
 @click.pass_context
-def airdrop_cmd(ctx, file: tuple, target: str, output: str | None) -> None:
+def airdrop_cmd(ctx, file: tuple, target: str, output: str | None, output_json: bool) -> None:
     """
     AirDrop-like screenshot and send via LocalSend.
 
@@ -37,4 +38,4 @@ def airdrop_cmd(ctx, file: tuple, target: str, output: str | None) -> None:
         rpi-gui airdrop --output /tmp/screen.png
     """
     # Forward to send_cmd with screenshot=True
-    ctx.forward(send_cmd, file=file, screenshot=True, target=target, output=output)
+    ctx.forward(send_cmd, file=file, screenshot=True, target=target, output=output, output_json=output_json)
