@@ -235,7 +235,10 @@ def main(job_id: str, prompt: str, agent: str = "codex", model: str = "") -> Non
                         if SENTINEL_PREFIX in line:
                             continue
                         # Skip command prompts
-                        if any(line.strip().startswith(prefix) for prefix in ['$', '>', 'alyssonpi@', '/']):
+                        if any(line.strip().startswith(prefix) for prefix in ['$', '>', 'alyssonpi@']):
+                            continue
+                        # Skip lines with binary paths or opencode command
+                        if '/bin/opencode' in line or 'opencode run' in line:
                             continue
                         lines.append(line)
 
