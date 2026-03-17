@@ -98,12 +98,12 @@ def _run_openclaw(job_id: str, prompt: str, model: str, session_name: str) -> in
     token = uuid.uuid4().hex[:8]
 
     # Build OpenClaw command - use 'openclaw agent' wrapper
-    openclaw_cmd = "openclaw agent --agent main"
+    # Quote the prompt to preserve spaces
+    prompt_quoted = f'"{prompt}"' if ' ' in prompt else prompt
+    openclaw_cmd = f"openclaw agent --agent main --message {prompt_quoted}"
 
     if model:
         openclaw_cmd += f" --model '{model}'"
-
-    openclaw_cmd += f" --message {prompt}"
 
     # Wrap with sentinel
     wrapped = f'{openclaw_cmd} ; echo "{SENTINEL_PREFIX}{token}:$?"'
