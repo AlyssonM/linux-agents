@@ -97,14 +97,13 @@ def _run_openclaw(job_id: str, prompt: str, model: str, session_name: str) -> in
     """Run job using OpenClaw agent CLI (same as openclaw-listen)."""
     token = uuid.uuid4().hex[:8]
 
-    # Build OpenClaw command
-    openclaw_cmd = [
-        "/usr/bin/node",
-        "/home/alyssonpi/.npm-global/lib/node_modules/openclaw/openclaw.mjs",
-        "agent",
-        "--agent", "main",
-        "--message", prompt,
-    ]
+    # Build OpenClaw command - use 'openclaw agent' to find the correct path
+    openclaw_cmd = "openclaw agent --agent main"
+
+    if model:
+        openclaw_cmd += f" --model '{model}'"
+
+    openclaw_cmd += f" --message {prompt}"
 
     if model:
         openclaw_cmd.extend(["--model", model])
