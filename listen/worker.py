@@ -97,7 +97,7 @@ def _run_openclaw(job_id: str, prompt: str, model: str, session_name: str) -> in
     """Run job using OpenClaw agent CLI (same as openclaw-listen)."""
     token = uuid.uuid4().hex[:8]
 
-    # Build OpenClaw command - use 'openclaw agent' to find the correct path
+    # Build OpenClaw command - use 'openclaw agent' wrapper
     openclaw_cmd = "openclaw agent --agent main"
 
     if model:
@@ -105,14 +105,11 @@ def _run_openclaw(job_id: str, prompt: str, model: str, session_name: str) -> in
 
     openclaw_cmd += f" --message {prompt}"
 
-    if model:
-        openclaw_cmd.extend(["--model", model])
-
     # Wrap with sentinel
-    wrapped_cmd = ' '.join(openclaw_cmd) + f' ; echo "{SENTINEL_PREFIX}{token}:$?"'
+    wrapped = f'{openclaw_cmd} ; echo "{SENTINEL_PREFIX}{token}:$?"'
 
     _ensure_session(session_name, str(REPO_ROOT))
-    _send_keys(session_name, wrapped_cmd)
+    _send_keys(session_name, wrapped)
     return _wait_for_sentinel(session_name, token)
 
 
