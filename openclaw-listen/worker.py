@@ -146,6 +146,19 @@ def main(job_id: str) -> None:
         err_message = stderr.strip() or stdout.strip() or f"ACP runner exited with code {_CHILD.returncode}"
         job["error"] = {"message": err_message[:4000]}
         job["result"]["stderr"] = stderr.strip()[:4000]
+        payload = None
+        try:
+            _, payload = _parse_runner_output(stdout, stderr)
+        except Exception:
+            payload = None
+        if isinstance(payload, dict):
+            if payload.get("partialMessage"):
+                job["result"]["message"] = str(payload.get("partialMessage"))[:4000]
+                job["result"]["summary"] = str(payload.get("partialMessage"))[:4000]
+            if payload.get("ignoredStdoutLines"):
+                job.setdefault("runtime", {})["ignored_stdout_lines"] = payload.get("ignoredStdoutLines")
+            if payload.get("stderr"):
+                job["result"]["stderr"] = str(payload.get("stderr"))[:4000]
         _append_update(job, "OpenClaw ACP runtime failed")
 
     job["result"]["exit_code"] = _CHILD.returncode
