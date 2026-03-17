@@ -163,8 +163,8 @@ def main(job_id: str, prompt: str, agent: str = "codex", model: str = "") -> Non
     if agent in ["codex", "claude", "openclaw"]:
         if not CODEX_SYSTEM_PROMPT.exists():
             raise SystemExit(f"Missing system prompt: {CODEX_SYSTEM_PROMPT}")
-        if not CODED_USER_PROMPT.exists():
-            raise SystemExit(f"Missing user prompt: {CODED_USER_PROMPT}")
+        if not CODEX_USER_PROMPT.exists():
+            raise SystemExit(f"Missing user prompt: {CODEX_USER_PROMPT}")
 
     session_name = f"job-{job_id}"
 
