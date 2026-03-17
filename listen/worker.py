@@ -254,6 +254,11 @@ if __name__ == "__main__":
         raise SystemExit("Usage: worker.py <job_id> <prompt> <agent> [model]")
     job_id = sys.argv[1]
     prompt = sys.argv[2]
-    agent = sys.argv[3]
+    agent = sys.argv[3] if len(sys.argv) > 3 else "codex"
     model = sys.argv[4] if len(sys.argv) > 4 else ""
+    # Debug: log received args
+    import os
+    debug_log = Path("/tmp/worker-debug.log")
+    with open(debug_log, "a") as f:
+        f.write(f"[{job_id}] agent={agent}, prompt={prompt}, model={model}\n")
     main(job_id, prompt, agent, model)
