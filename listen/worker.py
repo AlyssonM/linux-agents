@@ -173,6 +173,11 @@ def main(job_id: str, prompt: str, agent: str = "codex", model: str = "") -> Non
     data = _read_yaml(job_file)
     data["session"] = session_name
 
+    # Debug: Log which runner was selected
+    debug_log = Path("/tmp/worker-debug.log")
+    with open(debug_log, "a") as f:
+        f.write(f"[{job_id}] runner={runner.__name__}, agent={agent}\n")
+
     # Log which agent is being used
     if agent == "claude":
         agent_display = "OpenCode (claude compatibility mode)"
