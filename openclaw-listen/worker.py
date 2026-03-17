@@ -50,7 +50,7 @@ def _build_openclaw_cmd(job: dict) -> list[str]:
     thinking = execution.get("thinking")
     agent = execution.get("agent")
 
-    cmd = ["openclaw", "agent", "--local", "--json", "--message", instruction]
+    cmd = [OPENCLAW_BIN, "agent", "--local", "--json", "--message", instruction]
     timeout_seconds = execution.get("timeout_seconds")
     if timeout_seconds:
         cmd += ["--timeout", str(timeout_seconds)]

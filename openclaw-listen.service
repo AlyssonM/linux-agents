@@ -1,0 +1,17 @@
+[Unit]
+Description=linux-agents openclaw-listen server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=alyssonpi
+WorkingDirectory=/home/alyssonpi/.openclaw/workspace/linux-agents
+Environment=DISPLAY=:1
+Environment=PATH=/home/alyssonpi/.npm-global/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/alyssonpi/.openclaw/workspace/linux-agents/.venv/bin/python /home/alyssonpi/.openclaw/workspace/linux-agents/openclaw-listen/main.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
