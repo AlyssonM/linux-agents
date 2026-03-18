@@ -29,7 +29,7 @@ cd linux-agents
 source .venv/bin/activate
 
 # Set X11 display
-export DISPLAY=:1
+export DISPLAY=:0
 
 # Run a spec (follow the tasks)
 # Example: terminal-and-browser
@@ -71,7 +71,7 @@ See [../E2E-TEST-REPORT.md](../E2E-TEST-REPORT.md) for detailed results.
 
 ### Required
 - **Python:** 3.11+
-- **Display:** X11 (DISPLAY=:1 via tightvnc)
+- **Display:** X11 (DISPLAY=:0)
 - **Tools:** rpi-gui, rpi-term, rpi-client, rpi-job
 
 ### Optional (for specific specs)
@@ -121,13 +121,16 @@ rpi-client latest http://127.0.0.1:7600 -n 1
 
 **DISPLAY not set:**
 ```bash
-export DISPLAY=:1
+export DISPLAY=:0
 ```
 
 **X11 not running:**
 ```bash
-tightvncserver :1 -geometry 1920x1080 -depth 24
+systemctl status display-manager || systemctl status lightdm || systemctl status gdm || systemctl status sddm
+sudo systemctl restart display-manager || sudo systemctl restart lightdm || sudo systemctl restart gdm || sudo systemctl restart sddm
 ```
+
+`display-manager.service` is a generic systemd alias used by many distros. If the alias is not present, use the real service name (`lightdm`, `gdm`, or `sddm`) for your environment.
 
 **tmux session exists:**
 ```bash

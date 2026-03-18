@@ -6,7 +6,7 @@ Quick guide to run the `terminal-and-browser.md` E2E spec on Raspberry Pi 4.
 
 ```bash
 # 1. Check X11 is running
-DISPLAY=:1 xwininfo -root
+DISPLAY=:0 xwininfo -root
 
 # 2. Check tools installed
 which chromium-browser rpi-gui rpi-term
@@ -20,10 +20,10 @@ sudo apt install -y chromium-browser
 
 ## Quick Run
 
-### Step 1: Start X11 (if needed)
+### Step 1: Confirm X11 (if needed)
 ```bash
-tightvncserver :1 -geometry 1920x1080 -depth 24
-export DISPLAY=:1
+export DISPLAY=:0
+systemctl status display-manager || systemctl status lightdm || systemctl status gdm || systemctl status sddm
 ```
 
 ### Step 2: Create Terminal Session
@@ -42,7 +42,7 @@ ls -lh /tmp/e2e-browser-screenshot.png
 ### Step 4: Open Browser
 ```bash
 # Open Chromium
-DISPLAY=:1 chromium-browser --no-sandbox --disable-gpu &
+DISPLAY=:0 chromium-browser --no-sandbox --disable-gpu &
 BROWSER_PID=$!
 
 # Wait for load
@@ -94,13 +94,13 @@ ps aux | grep -E "(chromium|tmux)" | grep -v grep
 ### Chromium won't start
 ```bash
 # Try with more flags
-DISPLAY=:1 chromium-browser --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer &
+DISPLAY=:0 chromium-browser --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer &
 ```
 
 ### Screenshots are black
 ```bash
 # Verify X11
-DISPLAY=:1 xclock  # Should see a clock
+DISPLAY=:0 xclock  # Should see a clock
 ```
 
 ### rpi-term can't find session

@@ -6,23 +6,20 @@ This E2E spec validates the integration of terminal automation (rpi-term) and GU
 ## Instructions
 - As you work, keep notes in `/tmp/browser-integration-notes.txt`
 - If you work longer than 5 minutes (based on your start time), wrap up and send what you have.
-- Use DISPLAY=:1 (X11 tightvnc) for all GUI operations.
+- Use DISPLAY=:0 (X11) for all GUI operations.
 
 ## Prerequisites
-- X11 session running on DISPLAY=:1 (tightvnc)
+- X11 session running on DISPLAY=:0
 - Chromium browser installed: `sudo apt install -y chromium-browser`
 - tmux running for terminal sessions
 - All agents installed: rpi-gui, rpi-term, rpi-client
 
 ## Environment Setup
 
-### 1. Start X11 VNC Session (if not running)
+### 1. Validate X11 Session (if not running)
 ```bash
-# Start tightvnc on DISPLAY=:1
-tightvncserver :1 -geometry 1920x1080 -depth 24
-
-# Verify VNC is running
-ps aux | grep Xtightvnc | grep :1
+export DISPLAY=:0
+systemctl status display-manager || systemctl status lightdm || systemctl status gdm || systemctl status sddm
 ```
 
 ### 2. Verify Environment
@@ -82,7 +79,7 @@ ls -lh /tmp/e2e-browser-screenshot.png
 **Commands (Method A - Direct X11):**
 ```bash
 # Open Chromium in background
-DISPLAY=:1 chromium-browser --no-sandbox --disable-gpu &
+DISPLAY=:0 chromium-browser --no-sandbox --disable-gpu &
 BROWSER_PID=$!
 
 # Wait for browser to open
@@ -98,7 +95,7 @@ kill $BROWSER_PID
 **Commands (Method B - Using xdotool for focus):**
 ```bash
 # Open Chromium
-DISPLAY=:1 chromium-browser --no-sandbox --disable-gpu &
+DISPLAY=:0 chromium-browser --no-sandbox --disable-gpu &
 BROWSER_PID=$!
 sleep 3
 
@@ -211,7 +208,7 @@ Create `/tmp/e2e-browser-integration-report.md` containing:
 ```bash
 # Check X11 is running
 echo $DISPLAY
-ps aux | grep Xtightvnc
+systemctl status display-manager || systemctl status lightdm || systemctl status gdm || systemctl status sddm
 
 # Try with minimal flags
 chromium-browser --no-sandbox --disable-dev-shm-usage --disable-gpu
@@ -221,10 +218,10 @@ chromium-browser --no-sandbox --disable-dev-shm-usage --disable-gpu
 **Solution:**
 ```bash
 # Verify X11 session
-DISPLAY=:1 xwininfo -root
+DISPLAY=:0 xwininfo -root
 
 # Use scrot directly
-DISPLAY=:1 scrot /tmp/test-scrot.png
+DISPLAY=:0 scrot /tmp/test-scrot.png
 ```
 
 ### Issue: Window focus doesn't work
@@ -275,13 +272,13 @@ ps aux | grep -E "(chromium|tmux)" | grep -v grep
 - **Terminal:** rpi-term (tmux-based) instead of Terminal.app
 - **Browser:** Chromium on X11 instead of Safari
 - **GUI:** rpi-gui (xdotool/scrot) instead of AppleScript
-- **Display:** Headless X11 via VNC instead of physical display
+- **Display:** Native X11 (:0) instead of macOS desktop session
 - **OCR:** Tesseract via rpi-gui instead of Vision framework
 
 ### Platform-Specific Considerations
-- **No physical display:** All GUI operations via VNC/remote X11
+- **X11 desktop session:** GUI automation targets DISPLAY=:0
 - **ARM64 architecture:** Chromium performance may be slower
-- **Wayland limitations:** Must use X11 for GUI automation (DISPLAY=:1)
+- **Wayland limitations:** Must use X11 for GUI automation (DISPLAY=:0)
 - **Resource constraints:** 4GB RAM, browser may be slow to load
 
 ### Expected Runtime
@@ -296,4 +293,4 @@ ps aux | grep -E "(chromium|tmux)" | grep -v grep
 
 **Spec Version:** 1.0
 **Last Updated:** 2026-03-16
-**Environment:** Raspberry Pi 4, ARM64, X11 (tightvnc :1)
+**Environment:** Raspberry Pi 4, ARM64, X11 (:0)

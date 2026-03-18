@@ -213,6 +213,21 @@ export DISPLAY=:0
 export DISPLAY=:1
 ```
 
+### display-manager.service not found
+
+**Problem:** `systemctl status display-manager` returns unit not found on some systems.
+
+**Cause:** `display-manager.service` is usually an alias. Some installations expose only the concrete service unit.
+
+**Solutions:**
+```bash
+# Detect available display manager service
+systemctl status display-manager || systemctl status lightdm || systemctl status gdm || systemctl status sddm
+
+# Restart the service that exists
+sudo systemctl restart display-manager || sudo systemctl restart lightdm || sudo systemctl restart gdm || sudo systemctl restart sddm
+```
+
 ### OCR returns empty text
 
 **Problem:** Screenshot is black or unreadable
