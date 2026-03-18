@@ -2,34 +2,28 @@
 
 CLI client for the Codex-focused `listen/` server in `linux-agents`.
 
-This is the Linux adaptation of `mac-mini-agent/apps/direct/`, designed to pair with `listen/`.
-
 ## Role
 
 - `listen/` = agent-native Codex job server
 - `direct/` = CLI for submitting and inspecting those jobs
 
-## Run
+## Setup
 
 ```bash
-cd direct
-uv run python main.py --help
+uv sync
+uv run direct --help
 ```
 
 ## Examples
 
 ```bash
-# submit a job
-direct start http://127.0.0.1:7600 "Open Chromium and inspect the page"
+uv run direct start http://127.0.0.1:7600 "Open Chromium and inspect the page"
 
-# inspect a job
-direct get http://127.0.0.1:7600 <job_id>
+uv run direct get http://127.0.0.1:7600 <job_id>
 
-# latest job
-direct latest http://127.0.0.1:7600 1
+uv run direct latest http://127.0.0.1:7600 1
 
-# stop a job
-direct stop http://127.0.0.1:7600 <job_id>
+uv run direct stop http://127.0.0.1:7600 <job_id>
 ```
 
 ## Difference vs rpi-client

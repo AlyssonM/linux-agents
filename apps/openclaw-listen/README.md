@@ -1,6 +1,6 @@
 # openclaw-listen
 
-OpenClaw-native async job listener for `linux-agents`.
+OpenClaw-native async job listener for `linux-agents`, optimized for REST ingestion and subagent execution.
 
 This component is complementary to the existing job-server flows:
 
@@ -27,14 +27,14 @@ This component is complementary to the existing job-server flows:
 ## Run
 
 ```bash
-cd openclaw-listen
+cd apps/openclaw-listen
 python main.py
 ```
 
 or:
 
 ```bash
-uvicorn main:app --host 0.0.0.0 --port 7610
+uv run uvicorn main:app --host 0.0.0.0 --port 7610
 ```
 
 ## API
@@ -45,7 +45,7 @@ uvicorn main:app --host 0.0.0.0 --port 7610
 - `POST /jobs/clear` — archive all jobs
 - `POST /jobs/{id}/cancel` — best-effort cancellation
 
-`POST /jobs` returns HTTP `202` with both `id` and `job_id`, plus `status_url`, to stay convenient for machines and humans.
+`POST /jobs` returns HTTP `202` with `id`, `job_id`, and `status_url`.
 
 `GET /jobs` supports a small set of filters:
 
@@ -91,7 +91,7 @@ openclaw-listen/
 ├── main.py          # FastAPI app (REST API)
 ├── worker.py        # Job worker (spawns subagent subprocess)
 ├── jobs/            # Job state YAML files
-└── archived/        # Completed jobs
+└── jobs/archived/   # Archived jobs
 ```
 
 ### Job lifecycle
@@ -118,7 +118,7 @@ No limit on concurrent jobs is enforced by `openclaw-listen` itself; it's up to 
 - Add a queue system (e.g., Redis) if you need distributed job processing
 - Use system resource limits (ulimit, cgroups) if running many workers in parallel
 
-## Testing
+## Quick Test
 
 ```bash
 # Create a test job
@@ -145,9 +145,9 @@ After=network.target
 [Service]
 Type=simple
 User=alyssonpi
-WorkingDirectory=/home/alyssonpi/.openclaw/workspace/linux-agents/openclaw-listen
+WorkingDirectory=/home/alyssonpi/.openclaw/workspace/linux-agents/apps/openclaw-listen
 Environment="PATH=/home/alyssonpi/.openclaw/workspace/linux-agents/.venv/bin"
-ExecStart=/home/alyssonpi/.openclaw/workspace/linux-agents/.venv/bin/python main.py
+ExecStart=/home/alyssonpi/.openclaw/workspace/linux-agents/.venv/bin/python /home/alyssonpi/.openclaw/workspace/linux-agents/apps/openclaw-listen/main.py
 Restart=on-failure
 RestartSec=5
 

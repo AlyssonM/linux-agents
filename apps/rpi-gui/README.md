@@ -1,28 +1,25 @@
 # rpi-gui
 
-Core GUI automation CLI for Linux ARM64 (Raspberry Pi).
+GUI automation CLI for Linux ARM64 (Raspberry Pi), including screenshot capture, OCR, and desktop input control.
 
-## Sprint 1 Commands
+## Core Commands
 
-- `rpi-gui see` — capture screenshot, optional OCR metadata
-- `rpi-gui ocr` — OCR from current screen (Tesseract)
-- `rpi-gui click` — click by coordinates or OCR text
-- `rpi-gui type` — type text into focused window
-
-## Also integrated (Sprint 2/3 shared work)
-
-- `hotkey`, `scroll`, `drag`, `focus`
-- `apps list`, `screens list`, `window ...`, `find`
+- `rpi-gui see` captures screenshots with optional OCR metadata
+- `rpi-gui ocr` extracts text from the current screen using Tesseract
+- `rpi-gui click` clicks by coordinates or matched text
+- `rpi-gui type` types text in the focused window
+- `rpi-gui hotkey`, `scroll`, `drag` perform advanced input actions
+- `rpi-gui apps`, `screens`, `window`, `find` inspect and control desktop context
 
 ## Requirements
 
-System packages:
+Install system dependencies:
 
 ```bash
 sudo apt install tesseract-ocr tesseract-ocr-eng scrot xdotool wmctrl
 ```
 
-## Install with uv
+## Setup
 
 ```bash
 uv venv
@@ -30,7 +27,7 @@ uv sync --extra dev
 uv run rpi-gui --help
 ```
 
-## Example Usage
+## Usage
 
 ```bash
 uv run rpi-gui see --ocr
@@ -40,10 +37,8 @@ uv run rpi-gui click --text "Submit"
 uv run rpi-gui type "Hello world" --enter
 ```
 
-## Tests
+## Testing
 
 ```bash
 uv run pytest -q
 ```
-
-Test suite includes CLI and module-level coverage for all Sprint 1 operations and error paths.

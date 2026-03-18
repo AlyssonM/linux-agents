@@ -1,43 +1,48 @@
-# listen - Job Server (port 7600)
+# listen
 
-Multi-agent job server supporting **codex** and **opencode**.
+High-level REST job server used by the Linux Agents stack on port `7600`.
 
-## Agents
+## What It Does
 
-| Agent | Status | Notes |
-|-------|--------|-------|
-| **codex** | ⚠️ API limited | OpenAI reset until Mar 18, 2026 |
-| **claude** | ✅ Available | Alias for opencode |
-| **opencode** | ✅ Working | **Recommended** |
+- accepts jobs over HTTP
+- stores job state in YAML files under `apps/listen/jobs/`
+- spawns workers to execute prompts via configured agent runtimes
+- exposes endpoints to create, inspect, list, archive, and stop jobs
 
-## Usage
+## API
+
+- `POST /job`
+- `GET /job/{id}`
+- `GET /jobs`
+- `POST /jobs/clear`
+- `DELETE /job/{id}`
+
+## Run
 
 ```bash
-# Start server
-cd ~/Github/linux-agents
-.venv/bin/python listen/main.py
+cd apps/listen
+uv run python main.py
+```
 
-# Submit job
-curl -X POST http://localhost:7600/job \
+## Example Requests
+
+```bash
+curl -X POST http://127.0.0.1:7600/job \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "minha tarefa", "agent": "opencode"}'
+  -d '{"prompt":"escreva um script para monitorar CPU","agent":"opencode"}'
 
-# Check job
-curl http://localhost:7600/job/<job_id>
-
-# List jobs
-curl http://localhost:7600/jobs
+curl http://127.0.0.1:7600/job/<job_id>
+curl http://127.0.0.1:7600/jobs
 ```
 
-## Systemd Service
+## Companion CLI
 
 ```bash
-systemctl --user start linux-agents-listen
-systemctl --user status linux-agents-listen
+uv run rpi-client start http://127.0.0.1:7600 "minha tarefa" --agent opencode
 ```
 
-## Related
+## Related Components
 
-- **openclaw-listen** (port 7610) - Dedicated OpenClaw agent server
-- **AGENTS.md** - Detailed agent documentation
-- **DEBUG.md** - Debug notes and troubleshooting
+- `rpi-client` is the primary CLI client for this server
+- `rpi-job` is a simpler job-server implementation
+- `openclaw-listen` is the OpenClaw-focused listener variant
