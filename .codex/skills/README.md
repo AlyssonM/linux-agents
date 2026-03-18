@@ -106,6 +106,30 @@ rpi-client start http://localhost:7600 "ls -la" --json
 
 ---
 
+### secretctl (Secure Secret Management)
+
+Gerenciamento seguro de secrets (senhas, API keys, tokens) via Linux kernel keyring (keyctl). Secrets nunca são expostos a logs, histórico de sessão ou listagem de processos.
+
+**Localização:** `linux-agents/.codex/skills/secretctl/`
+
+**Comandos principais:**
+- `set` - Armazena um secret no keyring do kernel
+- `get` - Recupera secret (apenas para pipe - nunca expõe valor)
+- `delete` - Remove secret
+- `list` - Lista identificadores (sem valores)
+- `exists` - Verifica se secret existe
+- `update` - Atualiza valor ou TTL
+
+**Segurança:**
+- Armazenamento no keyring do kernel Linux (não em disco)
+- Valores nunca aparecem em logs ou histórico shell
+- Suporte a TTL para auto-expiração
+- Isolamento por namespace de usuário
+
+**Documentação:** [secretctl/SKILL.md](secretctl/SKILL.md)
+
+---
+
 ## Diferenças Principais vs macOS
 
 | Aspecto | macOS (Mac Mini Agent) | Linux (Linux Agents) |

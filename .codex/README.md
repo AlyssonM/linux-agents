@@ -32,3 +32,16 @@ At the moment, the contents are intentionally equivalent, with Linux/Raspberry P
 
 - If Codex-specific instructions are needed later, they should be edited here instead of `.claude/`.
 - Until then, `.claude/` and `.codex/` are kept logically aligned.
+
+## Secretctl no Codex
+
+- Skill: `.codex/skills/secretctl/SKILL.md`
+- Configuração MCP do projeto: `.codex/config.toml`
+- Guia completo de `pass` + `secretctl` + MCP: `.codex/skills/secretctl/SKILL.md`
+
+Comandos úteis:
+
+```bash
+codex mcp list
+codex mcp get secretctl
+```

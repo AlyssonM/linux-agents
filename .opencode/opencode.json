@@ -1,0 +1,16 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "secretctl": {
+      "type": "local",
+      "command": [
+        "/usr/bin/env",
+        "bash",
+        "-lc",
+        "SECRETCTL_PASSWORD=\"$(pass show secretctl/master-password)\" exec /usr/local/bin/secretctl mcp-server"
+      ],
+      "enabled": true,
+      "timeout": 10000
+    }
+  }
+}

@@ -1,0 +1,10 @@
+[mcp_servers.secretctl]
+command = "/usr/bin/env"
+args = [
+  "bash",
+  "-lc",
+  "SECRETCTL_PASSWORD=\"$(pass show secretctl/master-password)\" exec /usr/local/bin/secretctl mcp-server"
+]
+startup_timeout_sec = 20
+tool_timeout_sec = 60
+enabled = true

@@ -74,4 +74,5 @@ rpi-client list http://localhost:7610
 
 ## 5. Next Steps
 - Review [REQUIREMENTS.md](REQUIREMENTS.md) for full system dependencies.
-- Check the `.pi/skills/` directory for a complete command reference.
+- Check the agents (.pi, .codex, .claude, .opencode)`skills/` directory for a complete command reference.
+- For `secretctl` MCP + `pass`, read `.codex/skills/secretctl/SKILL.md`.
