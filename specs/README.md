@@ -57,8 +57,6 @@ cat specs/terminal-and-browser.md
 
 **Overall:** 95% pass rate (94.3% including all tests)
 
-See [../E2E-TEST-REPORT.md](../E2E-TEST-REPORT.md) for detailed results.
-
 ## Creating New Specs
 
 1. Copy [TEMPLATE.md](./TEMPLATE.md)
