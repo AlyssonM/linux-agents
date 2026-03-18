@@ -4,12 +4,16 @@ import pty
 import select
 import subprocess
 import sys
+import termios
 
 
 def run_with_pty(args, password):
     cmd = ["secretctl", *args]
     env = os.environ.copy()
     master_fd, slave_fd = pty.openpty()
+    attrs = termios.tcgetattr(slave_fd)
+    attrs[3] = attrs[3] & ~termios.ECHO
+    termios.tcsetattr(slave_fd, termios.TCSANOW, attrs)
     proc = subprocess.Popen(
         cmd,
         stdin=slave_fd,
@@ -30,7 +34,8 @@ def run_with_pty(args, password):
                 break
             if not data:
                 break
-            sys.stdout.write(data)
+            safe_data = data.replace(password, "[REDACTED:MASTER_PASSWORD]")
+            sys.stdout.write(safe_data)
             sys.stdout.flush()
             if any(token in data.lower() for token in prompt_tokens):
                 os.write(master_fd, (password + "\n").encode())

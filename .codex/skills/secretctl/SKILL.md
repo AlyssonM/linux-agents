@@ -97,10 +97,47 @@ SECRETCTL_PASSWORD="$(pass show secretctl/master-password)" \
   python3 test_openrouter.py
 ```
 
+Template agêntico para qualquer comando `secretctl`:
+
+```bash
+SECRETCTL_PASSWORD="$(pass show secretctl/master-password)" \
+python3 ~/.pi/skills/secretctl/scripts/wrapper_secretctl.py <comando_secretctl> [args...]
+```
+
+Exemplos diretos:
+
+```bash
+SECRETCTL_PASSWORD="$(pass show secretctl/master-password)" \
+python3 ~/.pi/skills/secretctl/scripts/wrapper_secretctl.py list
+
+SECRETCTL_PASSWORD="$(pass show secretctl/master-password)" \
+python3 ~/.pi/skills/secretctl/scripts/wrapper_secretctl.py get OPENROUTER_API_KEY
+
+SECRETCTL_PASSWORD="$(pass show secretctl/master-password)" \
+python3 ~/.pi/skills/secretctl/scripts/wrapper_secretctl.py set OPENROUTER_API_KEY
+
+SECRETCTL_PASSWORD="$(pass show secretctl/master-password)" \
+python3 ~/.pi/skills/secretctl/scripts/wrapper_secretctl.py delete OPENROUTER_API_KEY
+
+SECRETCTL_PASSWORD="$(pass show secretctl/master-password)" \
+python3 ~/.pi/skills/secretctl/scripts/wrapper_secretctl.py stc
+
+SECRETCTL_PASSWORD="$(pass show secretctl/master-password)" \
+python3 ~/.pi/skills/secretctl/scripts/wrapper_secretctl.py run -k OPENROUTER_API_KEY -- env | grep OPENROUTER
+```
+
 Regras obrigatórias no modo sem MCP:
 - Nunca usar senha literal em scripts, JSON, markdown ou histórico
 - Nunca exportar segredo de API em texto claro
 - Preferir `SECRETCTL_PASSWORD="$(pass show ...)" comando` em linha única
+- Nunca registrar em logs o output de digitação interativa de senha
+- Nunca incluir output bruto de terminal em processos de thinking quando houver prompt de senha
+- Tratar `secretctl get` como dado sensível e nunca persistir saída em logs
+
+Regras de execução com wrapper:
+- O wrapper pode executar comandos de consulta (`list`, `get`, `stc`) além de `run`
+- Para agente, prefira `run` no lugar de `get` para evitar retorno de segredo em stdout
+- Se `get` for obrigatório, consumir via pipe e descartar saída após uso
 
 ## Agentic MCP Setup
 
