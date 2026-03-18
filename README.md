@@ -2,6 +2,9 @@
 
 Terminal and GUI Automation Stack for Linux ARM64 (Raspberry Pi 4), powered by OpenClaw.
 
+**Keywords:** linux agents, ai agents, computer use, raspberry pi automation, x11 automation, gui automation, terminal automation, tmux automation, fastapi job server, ocr automation.
+**Tags:** #linux #raspberrypi #aiagents #automation #x11 #gui #tmux #fastapi #ocr #openclaw
+
 ---
 
 ## 🏗️ Components
@@ -93,6 +96,12 @@ Service templates are available in `templates/systemd/`. To install:
 1. Copy the `.template` file to `/etc/systemd/system/`.
 2. Replace `{{USER}}`, `{{WORKING_DIRECTORY}}`, and `{{PYTHON_VENV}}` with your actual paths.
 3. Run `sudo systemctl enable --now <service-name>`.
+
+---
+
+## 🙌 Inspiration
+
+This project is inspired by [mac-mini-agent](https://github.com/disler/mac-mini-agent), adapting the computer-use agent model to Linux ARM64 and Raspberry Pi workflows.
 
 ---
 
