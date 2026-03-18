@@ -1,8 +1,11 @@
 # Linux Agents Stack 🚀
 
+![linux-agents animated architecture](assets/architecture-v3-animated.svg)
+
 Terminal and GUI Automation Stack for Linux ARM64 (Raspberry Pi 4), powered by OpenClaw.
 
 **Keywords:** linux agents, ai agents, computer use, raspberry pi automation, x11 automation, gui automation, terminal automation, tmux automation, fastapi job server, ocr automation.
+
 **Tags:** #linux #raspberrypi #aiagents #automation #x11 #gui #tmux #fastapi #ocr #openclaw
 
 ---
