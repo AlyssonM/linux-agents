@@ -21,6 +21,13 @@ CODEX_SYSTEM_PROMPT = REPO_ROOT / ".opencode" / "agents" / "job-system-prompt.md
 CODEX_USER_PROMPT = REPO_ROOT / ".opencode" / "commands" / "rpi-gui-term-user-prompt.md"
 
 _THINKING_LEVELS = {"off", "minimal", "low", "medium", "high", "xhigh"}
+_INLINE_SECRET_PATTERNS = [
+    re.compile(r"\bsk-or-v1-[A-Za-z0-9._-]{12,}\b"),
+    re.compile(r"\bsk-[A-Za-z0-9._-]{12,}\b"),
+    re.compile(r"(?i)\b(?:api[_-]?key|token|secret|authorization|bearer)\s*[:=]\s*['\"]?[^'\"\s]+"),
+    re.compile(r"(?i)\b[A-Z0-9_]*KEY\s*=\s*['\"]?[^'\"\s]+"),
+]
+_SENSITIVE_LINE_HINTS = re.compile(r"(?i)\b(api[_-]?key|authorization|bearer|token|secretctl_password)\b")
 
 
 def _split_model_and_thinking(model: str) -> tuple[str, str | None]:
@@ -31,6 +38,19 @@ def _split_model_and_thinking(model: str) -> tuple[str, str | None]:
     if suffix in _THINKING_LEVELS:
         return base, suffix
     return model, None
+
+
+def _sanitize_text(value: str) -> str:
+    sanitized = value
+    for pattern in _INLINE_SECRET_PATTERNS:
+        sanitized = pattern.sub("[REDACTED]", sanitized)
+    return sanitized
+
+
+def _line_is_sensitive(line: str) -> bool:
+    if _SENSITIVE_LINE_HINTS.search(line):
+        return True
+    return any(pattern.search(line) for pattern in _INLINE_SECRET_PATTERNS)
 
 
 def _tmux(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -303,6 +323,8 @@ def main(
                         # Skip empty lines
                         if not line:
                             continue
+                        if _line_is_sensitive(line):
+                            continue
                         if line.strip().startswith("export DISPLAY="):
                             continue
                         if "API_KEY" in line:
@@ -316,11 +338,18 @@ def main(
                         # Skip lines with binary paths or command prefixes
                         if any(p in line for p in ['/bin/opencode', 'opencode run', '/bin/pi', 'pi -p']):
                             continue
-                        lines.append(line)
+                        lines.append(_sanitize_text(line))
 
                     # Take last 20 useful lines
                     if lines:
                         data["summary"] = '\n'.join(lines[-20:])[:4000]
+
+            if data.get("summary"):
+                data["summary"] = _sanitize_text(str(data["summary"]))[:4000]
+            elif data.get("status") == "completed":
+                data["summary"] = "Job completed successfully (no textual output captured)."
+            else:
+                data["summary"] = f"Job failed with exit code {exit_code} (no textual output captured)."
 
             _write_yaml(job_file, data)
 
