@@ -41,17 +41,7 @@ rpi-gui/artifacts/**
 !rpi-gui/artifacts/.gitkeep
 
 # Job runtime state
-rpi-job/jobs/*.yaml
-rpi-job/jobs/archived/*.yaml
-rpi-job/rpi_job/jobs/*.yaml
-rpi-job/rpi_job/jobs/archived/*.yaml
-listen/jobs/*.yaml
-listen/jobs/archived/*.yaml
-openclaw-listen/jobs/*.yaml
-openclaw-listen/jobs/archived/*.yaml
-!rpi-job/jobs/.gitkeep
-!rpi-job/jobs/archived/.gitkeep
-!listen/jobs/.gitkeep
-!listen/jobs/archived/.gitkeep
-!openclaw-listen/jobs/.gitkeep
-!openclaw-listen/jobs/archived/.gitkeep
+apps/**/jobs/*.yaml
+apps/**/jobs/archived/*.yaml
+!apps/**/jobs/.gitkeep
+!apps/**/jobs/archived/.gitkeep

@@ -57,7 +57,7 @@ uv run uvicorn main:app --host 0.0.0.0 --port 7610
 
 ```json
 {
-  "instruction": "Abra o Chromium e me diga o que está aberto na tela",
+  "instruction": "Open Chromium and tell me what is visible on screen",
   "execution": {
     "strategy": "auto",
     "timeout_seconds": 120,

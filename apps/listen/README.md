@@ -97,12 +97,12 @@ curl -X POST http://127.0.0.1:7600/jobs/clear
 curl -X DELETE http://127.0.0.1:7600/job/<job_id>
 ```
 
-Use os exemplos com `"api_key":"..."` apenas para teste manual por humano.
-Para fluxo agêntico, não envie `api_key` no payload.
+Use examples with `"api_key":"..."` only for manual human testing.
+For agentic flows, do not send `api_key` in the payload.
 
-## Agentic-safe sem api_key no payload
+## Agentic-safe without api_key in payload
 
-Suba o servidor com segredos injetados no ambiente:
+Start the server with secrets injected into the environment:
 
 ```bash
 cd apps/listen
@@ -111,7 +111,7 @@ python3 ~/.pi/skills/secretctl/scripts/wrapper_secretctl.py run -k OPENROUTER_AP
 uv run python main.py
 ```
 
-Depois crie jobs sem `api_key` e sem `api_key_env`:
+Then create jobs without `api_key` and without `api_key_env`:
 
 ```bash
 curl -X POST http://127.0.0.1:7600/job \
@@ -123,10 +123,10 @@ curl -X POST http://127.0.0.1:7600/job \
   }'
 ```
 
-## Agentic-safe com systemd (serviço persistente)
+## Agentic-safe with systemd (persistent service)
 
-Se o `listen` roda como serviço (`linux-agents-listen.service`), primeiro confirme qual manager está ativo.
-Evite manter as duas units (user e system) ao mesmo tempo com a mesma porta.
+If `listen` runs as a service (`linux-agents-listen.service`), first confirm which manager is active.
+Avoid keeping both units (user and system) active at the same time on the same port.
 
 ```bash
 systemctl --user cat linux-agents-listen.service
@@ -134,7 +134,7 @@ sudo systemctl cat linux-agents-listen.service
 ps -ef | grep '/apps/listen/main.py' | grep -v grep
 ```
 
-Se o serviço ativo for o system service (`/etc/systemd/system/linux-agents-listen.service`), injete no manager do sistema e reinicie:
+If the active service is the system service (`/etc/systemd/system/linux-agents-listen.service`), inject into the system manager and restart:
 
 ```bash
 SECRETCTL_PASSWORD="$(pass show secretctl/master-password)" \
@@ -145,9 +145,9 @@ sudo systemctl restart linux-agents-listen.service
 sudo systemctl status linux-agents-listen.service --no-pager -n 30
 ```
 
-Se o serviço ativo for o user service, use `systemctl --user set-environment` e `systemctl --user restart`.
+If the active service is the user service, use `systemctl --user set-environment` and `systemctl --user restart`.
 
-Depois envie jobs sem chave no payload:
+Then submit jobs without a key in the payload:
 
 ```bash
 curl -X POST http://127.0.0.1:7600/job \
@@ -159,14 +159,14 @@ curl -X POST http://127.0.0.1:7600/job \
   }'
 ```
 
-Quando quiser trocar para uma nova chave, rode o mesmo `set-environment` com a nova secret e reinicie o serviço.
+When you need to switch to a new key, run the same `set-environment` with the new secret and restart the service.
 
-Você não precisa reinjetar a cada troca de provider se já carregar todas as chaves necessárias no serviço.
-Reinjetar só é necessário quando:
-- entrar um provider novo ainda não carregado
-- houver rotação de chave
+You do not need to re-inject on every provider switch if all required keys are already loaded in the service.
+Re-injection is only required when:
+- a new provider is introduced and not yet loaded
+- a key rotation happens
 
-Exemplo carregando OpenRouter + OpenAI e reiniciando uma única vez:
+Example loading OpenRouter + OpenAI and restarting only once:
 
 ```bash
 SECRETCTL_PASSWORD="$(pass show secretctl/master-password)" \
@@ -180,19 +180,19 @@ bash -lc 'sudo systemctl set-environment OPENAI_API_KEY="$OPENAI_API_KEY"'
 sudo systemctl restart linux-agents-listen.service
 ```
 
-Se o job falhar com `No API key found for openrouter` após esse fluxo, normalmente o `curl` está batendo em outro processo `listen` (fora desse service).
-Valide:
+If the job fails with `No API key found for openrouter` after this flow, `curl` is usually hitting another `listen` process (outside this service).
+Validate:
 
 ```bash
 sudo systemctl cat linux-agents-listen.service
 ps -ef | grep '/apps/listen/main.py' | grep -v grep
 ```
 
-Garanta que exista apenas um servidor na porta `7600` e que ele seja o mesmo processo do service que recebeu `set-environment`.
+Ensure there is only one server on port `7600`, and that it is the same service process that received `set-environment`.
 
-### Modo agentic com `api_key` no payload (não recomendado)
+### Agentic mode with `api_key` in payload (not recommended)
 
-Funciona, inclusive após a sanitização do worker, mas ainda é um caminho com risco operacional maior.
+It works, including after worker-side sanitization, but it still has higher operational risk.
 
 ```bash
 SECRETCTL_PASSWORD="$(pass show secretctl/master-password)" \
@@ -202,16 +202,16 @@ bash -lc 'curl -sS -X POST http://127.0.0.1:7600/job \
   -d "{\"prompt\":\"write a small motivation quote\",\"agent\":\"pi\",\"model\":\"openrouter/openai/gpt-oss-20b\",\"api_key_env\":\"OPENROUTER_API_KEY\",\"api_key\":\"$OPENROUTER_API_KEY\"}"'
 ```
 
-Riscos principais desse formato:
-- a chave pode aparecer em histórico de shell e telemetria de terminal
-- a chave pode vazar em logs de proxy/reverse-proxy antes de chegar no worker
-- a chave pode ser capturada por ferramentas de observabilidade HTTP no caminho
+Main risks of this format:
+- the key may appear in shell history and terminal telemetry
+- the key may leak in proxy/reverse-proxy logs before reaching the worker
+- the key may be captured by HTTP observability tools in transit
 
-Recomendação: preferir `set-environment` no systemd e enviar `/job` sem `api_key` no JSON.
+Recommendation: prefer `set-environment` in systemd and submit `/job` without `api_key` in JSON.
 
 ## Using shell env vars for safer curl usage
 
-Uso manual por humano:
+Manual human usage:
 
 ```bash
 LISTEN_URL="http://127.0.0.1:7600"
@@ -250,7 +250,7 @@ curl -X POST "$LISTEN_URL/job" \
 ## Companion CLI
 
 ```bash
-uv run rpi-client start http://127.0.0.1:7600 "minha tarefa" --agent opencode
+uv run rpi-client start http://127.0.0.1:7600 "my task" --agent opencode
 ```
 
 ## Related Components
