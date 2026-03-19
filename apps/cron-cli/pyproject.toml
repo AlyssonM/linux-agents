@@ -1,0 +1,29 @@
+[project]
+name = "cron-cli"
+version = "0.1.0"
+description = "CLI for CRUD management of user cron tasks with scripts"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "click>=8.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+]
+
+[project.scripts]
+cron-cli = "cron_cli.main:cli"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cron_cli*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+addopts = "-q"

@@ -77,8 +77,10 @@ def latest_jobs(url: str, n: int = 1) -> str:
     if n < 1:
         raise ClientError("n must be >= 1")
     data = yaml.safe_load(list_jobs(url)) or {}
-    # Sort by created_at descending (newest first)
     jobs = (data.get("jobs") or [])
-    jobs_sorted = sorted(jobs, key=lambda j: j.get("created_at", ""), reverse=True)
-    # Take first n (already newest-first)
-    return "---\n".join(get_job(url, j["id"]) for j in jobs_sorted[:n] if "id" in j)
+    jobs_sorted = sorted(
+        enumerate(jobs),
+        key=lambda item: (item[1].get("created_at", ""), item[0]),
+        reverse=True,
+    )
+    return "---\n".join(get_job(url, job["id"]) for _, job in jobs_sorted[:n] if "id" in job)
