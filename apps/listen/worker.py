@@ -12,6 +12,7 @@ from pathlib import Path
 import yaml
 
 SENTINEL_PREFIX = "__JOBDONE_"
+START_PREFIX = "__JOBSTART_"
 POLL_INTERVAL = 2.0
 
 BASE_DIR = Path(__file__).parent
@@ -19,6 +20,7 @@ JOBS_DIR = BASE_DIR / "jobs"
 REPO_ROOT = BASE_DIR.parent.parent
 CODEX_SYSTEM_PROMPT = REPO_ROOT / ".opencode" / "agents" / "job-system-prompt.md"
 CODEX_USER_PROMPT = REPO_ROOT / ".opencode" / "commands" / "rpi-gui-term-user-prompt.md"
+PI_OUTPUT_PREFIX = "/tmp/listen-pi-output-"
 
 _THINKING_LEVELS = {"off", "minimal", "low", "medium", "high", "xhigh"}
 _INLINE_SECRET_PATTERNS = [
@@ -28,6 +30,7 @@ _INLINE_SECRET_PATTERNS = [
     re.compile(r"(?i)\b[A-Z0-9_]*KEY\s*=\s*['\"]?[^'\"\s]+"),
 ]
 _SENSITIVE_LINE_HINTS = re.compile(r"(?i)\b(api[_-]?key|authorization|bearer|token|secretctl_password)\b")
+_ANSI_ESCAPE_PATTERN = re.compile(r"\x1b\[[0-9;]*m")
 
 
 def _split_model_and_thinking(model: str) -> tuple[str, str | None]:
@@ -47,10 +50,36 @@ def _sanitize_text(value: str) -> str:
     return sanitized
 
 
+def _extract_between_markers(captured: str) -> str:
+    lines = captured.splitlines()
+    start_index = -1
+    end_index = len(lines)
+
+    for idx, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith(START_PREFIX):
+            start_index = idx
+        if stripped.startswith(SENTINEL_PREFIX):
+            end_index = idx
+            break
+
+    if start_index >= 0:
+        return "\n".join(lines[start_index + 1:end_index])
+    return captured
+
+
 def _line_is_sensitive(line: str) -> bool:
     if _SENSITIVE_LINE_HINTS.search(line):
         return True
     return any(pattern.search(line) for pattern in _INLINE_SECRET_PATTERNS)
+
+
+def _strip_ansi(value: str) -> str:
+    return _ANSI_ESCAPE_PATTERN.sub("", value)
+
+
+def _line_has_italic_ansi(value: str) -> bool:
+    return "\x1b[3m" in value or "\x1b[23m" in value
 
 
 def _tmux(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -120,7 +149,7 @@ def _run_codex(job_id: str, prompt: str, model: str, session_name: str) -> int:
 
     codex_cmd += f"-o '{output_file}' - < '{prompt_file}'"
 
-    wrapped = f'{codex_cmd} ; echo "{SENTINEL_PREFIX}{token}:$?"'
+    wrapped = f'echo "{START_PREFIX}{token}" ; {codex_cmd} ; echo "{SENTINEL_PREFIX}{token}:$?"'
 
     _ensure_session(session_name, str(REPO_ROOT))
     _send_keys(session_name, wrapped)
@@ -140,7 +169,7 @@ def _run_openclaw(job_id: str, prompt: str, model: str, session_name: str) -> in
         openclaw_cmd += f" --model '{model}'"
 
     # Wrap with sentinel
-    wrapped = f'{openclaw_cmd} ; echo "{SENTINEL_PREFIX}{token}:$?"'
+    wrapped = f'echo "{START_PREFIX}{token}" ; {openclaw_cmd} ; echo "{SENTINEL_PREFIX}{token}:$?"'
 
     _ensure_session(session_name, str(REPO_ROOT))
     _send_keys(session_name, wrapped)
@@ -168,7 +197,7 @@ def _run_opencode(job_id: str, prompt: str, model: str, session_name: str) -> in
         opencode_cmd.extend(["--model", model])
 
     # Wrap with sentinel
-    wrapped_cmd = ' '.join([str(c) for c in opencode_cmd]) + f' ; echo "{SENTINEL_PREFIX}{token}:$?"'
+    wrapped_cmd = f'echo "{START_PREFIX}{token}" ; ' + ' '.join([str(c) for c in opencode_cmd]) + f' ; echo "{SENTINEL_PREFIX}{token}:$?"'
 
     _ensure_session(session_name, str(REPO_ROOT))
     _send_keys(session_name, wrapped_cmd)
@@ -208,8 +237,13 @@ def _run_pi(job_id: str, prompt: str, model: str, session_name: str, api_key_env
     if thinking_level:
         pi_cmd_str += f" --thinking {thinking_level}"
 
-    # Wrap with sentinel
-    wrapped_cmd = pi_cmd_str + f' ; echo "{SENTINEL_PREFIX}{token}:$?"'
+    pi_output_file = Path(f"{PI_OUTPUT_PREFIX}{job_id}.txt")
+    wrapped_cmd = (
+        f'echo "{START_PREFIX}{token}" ; '
+        + pi_cmd_str
+        + f" > {shlex.quote(str(pi_output_file))} 2>&1 ; "
+        + f'echo "{SENTINEL_PREFIX}{token}:$?"'
+    )
     _send_keys(session_name, wrapped_cmd)
     return _wait_for_sentinel(session_name, token)
 
@@ -313,9 +347,49 @@ def main(
                     output_file = Path(f"/tmp/listen-codex-output-{job_id}.txt")
                     if output_file.exists():
                         data["summary"] = output_file.read_text(encoding="utf-8").strip()[:4000]
-                elif agent in ["opencode", "openclaw", "pi"] and _session_exists(session_name):
-                    # Capture tmux output for opencode/openclaw/pi
-                    captured = _capture_pane(session_name)
+                elif agent == "pi":
+                    pi_output_file = Path(f"{PI_OUTPUT_PREFIX}{job_id}.txt")
+                    captured = ""
+                    if pi_output_file.exists():
+                        captured = pi_output_file.read_text(encoding="utf-8", errors="replace")
+                    if not captured and _session_exists(session_name):
+                        captured = _extract_between_markers(_capture_pane(session_name))
+                    blocks: list[list[str]] = []
+                    current_block: list[str] = []
+
+                    for raw_line in captured.split('\n'):
+                        line = _strip_ansi(raw_line).rstrip()
+                        if not line:
+                            if current_block:
+                                blocks.append(current_block)
+                                current_block = []
+                            continue
+                        if _line_has_italic_ansi(raw_line):
+                            continue
+                        if _line_is_sensitive(line):
+                            continue
+                        if line.strip().startswith("export DISPLAY="):
+                            continue
+                        if "API_KEY" in line:
+                            continue
+                        if START_PREFIX in line or SENTINEL_PREFIX in line or ':$?' in line or ':$\'"' in line:
+                            continue
+                        if any(line.strip().startswith(prefix) for prefix in ['$', '>', 'alyssonpi@']):
+                            continue
+                        if any(p in line for p in ['/bin/pi', 'pi -p']):
+                            continue
+                        if any(p in line for p in ['listen-pi-output-', '--model', '.npm-global/bin/pi']):
+                            continue
+                        current_block.append(_sanitize_text(line))
+
+                    if current_block:
+                        blocks.append(current_block)
+
+                    if blocks:
+                        data["summary"] = '\n'.join(blocks[-1][-20:])[:4000]
+                elif agent in ["opencode", "openclaw"] and _session_exists(session_name):
+                    # Capture tmux output for opencode/openclaw
+                    captured = _extract_between_markers(_capture_pane(session_name))
                     lines = []
 
                     for line in captured.split('\n'):
@@ -356,8 +430,10 @@ def main(
         # Cleanup
         prompt_file = Path(f"/tmp/listen-codex-prompt-{job_id}.md")
         output_file = Path(f"/tmp/listen-codex-output-{job_id}.txt")
+        pi_output_file = Path(f"{PI_OUTPUT_PREFIX}{job_id}.txt")
         prompt_file.unlink(missing_ok=True)
         output_file.unlink(missing_ok=True)
+        pi_output_file.unlink(missing_ok=True)
         if _session_exists(session_name):
             _tmux("kill-session", "-t", session_name, check=False)
 
