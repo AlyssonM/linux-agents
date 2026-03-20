@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
+import signal
 import subprocess
 from typing import Any
 
@@ -54,6 +56,27 @@ def _sync(ctx: click.Context) -> None:
     repo = ctx.obj["repo"]
     crontab = ctx.obj["crontab"]
     crontab.sync_tasks(repo.list_tasks())
+
+
+def _find_task_pids(script_path: str) -> list[int]:
+    result = subprocess.run(["pgrep", "-f", script_path], capture_output=True, text=True, check=False)
+    if result.returncode == 1:
+        return []
+    if result.returncode != 0:
+        raise click.ClickException(result.stderr.strip() or "failed to list running processes")
+    pids: list[int] = []
+    current_pid = os.getpid()
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            pid = int(line)
+        except ValueError:
+            continue
+        if pid != current_pid:
+            pids.append(pid)
+    return pids
 
 
 @cli.command("list")
@@ -197,6 +220,47 @@ def run_cmd(ctx: click.Context, task_id: str) -> None:
         _emit(ctx, payload)
         raise SystemExit(1)
     _emit(ctx, payload, fallback=f"task {task.id} exit={result.returncode}")
+
+
+@cli.command("stop")
+@click.argument("task_id")
+@click.option(
+    "--signal",
+    "signal_name",
+    type=click.Choice(["TERM", "KILL"], case_sensitive=False),
+    default="TERM",
+    show_default=True,
+)
+@click.pass_context
+def stop_cmd(ctx: click.Context, task_id: str, signal_name: str) -> None:
+    repo = ctx.obj["repo"]
+    try:
+        task = repo.get_task(task_id)
+    except FileNotFoundError as exc:
+        raise click.ClickException(str(exc)) from exc
+    pids = _find_task_pids(task.script_path)
+    if not pids:
+        payload = {"task_id": task.id, "status": "not_running", "signal": signal_name, "stopped_pids": [], "stopped_count": 0}
+        _emit(ctx, payload, fallback=f"task {task.id} is not running")
+        return
+    target_signal = signal.SIGTERM if signal_name.upper() == "TERM" else signal.SIGKILL
+    stopped: list[int] = []
+    for pid in pids:
+        try:
+            os.kill(pid, target_signal)
+            stopped.append(pid)
+        except ProcessLookupError:
+            continue
+        except PermissionError as exc:
+            raise click.ClickException(f"permission denied to stop process {pid}") from exc
+    payload = {
+        "task_id": task.id,
+        "status": "stopped",
+        "signal": signal_name.upper(),
+        "stopped_pids": stopped,
+        "stopped_count": len(stopped),
+    }
+    _emit(ctx, payload, fallback=f"stopped {len(stopped)} process(es) for task {task.id}")
 
 
 if __name__ == "__main__":

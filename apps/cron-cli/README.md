@@ -26,6 +26,7 @@ uv run cron-cli --help
 - `delete` removes a task
 - `apply` rebuilds the managed crontab block
 - `run` executes the task script immediately
+- `stop` stops currently running processes for a task
 
 ## Examples
 
@@ -45,7 +46,13 @@ uv run cron-cli get <task_id> --json
 ```bash
 uv run cron-cli update <task_id> --schedule "0 * * * *" --instruction "Run every hour"
 uv run cron-cli run <task_id> --json
+uv run cron-cli stop <task_id>
+uv run cron-cli stop <task_id> --signal KILL
 uv run cron-cli delete <task_id>
+```
+
+```bash
+uv run cron-cli stop <task_id> --json
 ```
 
 ## Testing
