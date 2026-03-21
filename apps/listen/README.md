@@ -12,6 +12,7 @@ High-level REST job server used by the Linux Agents stack on port `7600`.
 ## API
 
 - `POST /job`
+- `POST /job/upload`
 - `GET /job/{id}`
 - `GET /jobs`
 - `POST /jobs/clear`
@@ -26,15 +27,30 @@ High-level REST job server used by the Linux Agents stack on port `7600`.
   "model": "optional provider/model string",
   "timeout_seconds": 900,
   "api_key": "optional raw key value",
-  "api_key_env": "optional env var name, e.g. OPENAI_API_KEY"
+  "api_key_env": "optional env var name, e.g. OPENAI_API_KEY",
+  "image_attachments": ["optional image path or URL", "optional image path or URL"]
 }
 ```
 
 - `api_key` is injected only into the worker process.
+- `image_attachments` is appended to prompt context and passed to the selected agent.
 - if `api_key` is set and `api_key_env` is omitted, the server infers env name from model provider:
   - `openai/gpt-4.1` → `OPENAI_API_KEY`
   - `anthropic/claude-sonnet-4` → `ANTHROPIC_API_KEY`
   - `openrouter/openai/gpt-4o-mini` → `OPENROUTER_API_KEY`
+
+### `POST /job/upload` (multipart form-data)
+
+Accepted form fields:
+- `prompt` (required)
+- `agent` (optional)
+- `model` (optional)
+- `api_key` (optional)
+- `api_key_env` (optional)
+- `image_attachments` (optional, repeatable for URL/path entries)
+- `image_files` (optional, repeatable image uploads)
+
+Uploaded files are persisted under `apps/listen/jobs/uploads/<job_id>/`.
 
 ## Run
 
@@ -60,6 +76,19 @@ curl -X POST http://127.0.0.1:7600/job \
     "model":"openrouter/openai/gpt-4o-mini"
   }'
 
+# 2b) Create a multimodal job with image attachments
+curl -X POST http://127.0.0.1:7600/job \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt":"analyze these screenshots and summarize the issue",
+    "agent":"pi",
+    "model":"openrouter/openai/gpt-4o-mini",
+    "image_attachments":[
+      "/home/alyssonpi/screenshots/error-1.png",
+      "https://example.com/diagram.png"
+    ]
+  }'
+
 # 3) Create a Pi job with explicit API key env
 curl -X POST http://127.0.0.1:7600/job \
   -H "Content-Type: application/json" \
@@ -71,7 +100,15 @@ curl -X POST http://127.0.0.1:7600/job \
     "api_key":"sk-..."
   }'
 
-# 4) Create a job and let listen infer API key env from model provider
+# 4) Upload images from another machine using multipart
+curl -X POST http://127.0.0.1:7600/job/upload \
+  -F 'prompt=analyze the attached screenshot and explain root cause' \
+  -F 'agent=pi' \
+  -F 'model=openrouter/openai/gpt-4o-mini' \
+  -F 'image_files=@/home/user/captura.png' \
+  -F 'image_files=@/home/user/fluxo.jpg'
+
+# 5) Create a job and let listen infer API key env from model provider
 curl -X POST http://127.0.0.1:7600/job \
   -H "Content-Type: application/json" \
   -d '{
@@ -81,19 +118,19 @@ curl -X POST http://127.0.0.1:7600/job \
     "api_key":"sk-ant-..."
   }'
 
-# 5) Inspect one job
+# 6) Inspect one job
 curl http://127.0.0.1:7600/job/<job_id>
 
-# 6) List running/non-archived jobs
+# 7) List running/non-archived jobs
 curl http://127.0.0.1:7600/jobs
 
-# 7) List archived jobs
+# 8) List archived jobs
 curl "http://127.0.0.1:7600/jobs?archived=true"
 
-# 8) Archive all active jobs
+# 9) Archive all active jobs
 curl -X POST http://127.0.0.1:7600/jobs/clear
 
-# 9) Stop one running job
+# 10) Stop one running job
 curl -X DELETE http://127.0.0.1:7600/job/<job_id>
 ```
 

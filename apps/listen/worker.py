@@ -130,6 +130,31 @@ def _render_prompt(job_id: str, user_prompt: str) -> str:
     return f"{system_prompt}\n\n---\n\n{command_prompt}\n"
 
 
+def _normalize_image_attachments(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    attachments: list[str] = []
+    for item in value:
+        if not isinstance(item, str):
+            continue
+        cleaned = item.strip()
+        if cleaned and cleaned not in attachments:
+            attachments.append(cleaned)
+    return attachments
+
+
+def _build_prompt_with_images(prompt: str, image_attachments: list[str]) -> str:
+    if not image_attachments:
+        return prompt
+    attachments_block = "\n".join(f"- {image_path}" for image_path in image_attachments)
+    return (
+        f"{prompt.rstrip()}\n\n"
+        "Use the images below as additional context for this task.\n"
+        "Image attachments:\n"
+        f"{attachments_block}"
+    )
+
+
 def _run_codex(job_id: str, prompt: str, model: str, session_name: str) -> int:
     """Run job using codex exec (original implementation)."""
     token = uuid.uuid4().hex[:8]
@@ -297,6 +322,8 @@ def main(
 
     start_time = time.time()
     data = _read_yaml(job_file)
+    image_attachments = _normalize_image_attachments(data.get("image_attachments"))
+    prompt_with_images = _build_prompt_with_images(prompt, image_attachments)
     data["session"] = session_name
 
     # Log which agent is being used
@@ -315,15 +342,17 @@ def main(
         data.setdefault("updates", []).append(f"Spawned {agent_display} worker using model: {model}")
     else:
         data.setdefault("updates", []).append(f"Spawned {agent_display} worker with default model")
+    if image_attachments:
+        data.setdefault("updates", []).append(f"Attached {len(image_attachments)} image(s) to prompt context")
 
     _write_yaml(job_file, data)
 
     exit_code = 1
     try:
         if agent == "pi":
-            exit_code = runner(job_id, prompt, model, session_name, api_key_env, api_key_value)
+            exit_code = runner(job_id, prompt_with_images, model, session_name, api_key_env, api_key_value)
         else:
-            exit_code = runner(job_id, prompt, model, session_name)
+            exit_code = runner(job_id, prompt_with_images, model, session_name)
     except Exception as exc:
         data = _read_yaml(job_file)
         data["status"] = "failed"

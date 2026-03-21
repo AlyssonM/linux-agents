@@ -11,7 +11,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import yaml
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
@@ -19,8 +19,10 @@ app = FastAPI(title="listen")
 BASE_DIR = Path(__file__).parent
 JOBS_DIR = BASE_DIR / "jobs"
 ARCHIVED_DIR = JOBS_DIR / "archived"
+UPLOADS_DIR = JOBS_DIR / "uploads"
 JOBS_DIR.mkdir(exist_ok=True)
 ARCHIVED_DIR.mkdir(exist_ok=True)
+UPLOADS_DIR.mkdir(exist_ok=True)
 
 
 class JobRequest(BaseModel):
@@ -30,6 +32,7 @@ class JobRequest(BaseModel):
     timeout_seconds: int = 900
     api_key: str | None = None
     api_key_env: str | None = None
+    image_attachments: list[str] | None = None
 
 
 def _infer_api_key_env(model: str | None) -> str | None:
@@ -50,42 +53,123 @@ def _read_job(path: Path) -> dict:
     return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
 
 
-@app.post("/job")
-def create_job(req: JobRequest):
-    job_id = uuid4().hex[:8]
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    job_file = JOBS_DIR / f"{job_id}.yaml"
+def _normalize_image_attachments(values: list[str] | None) -> list[str]:
+    if not values:
+        return []
+    normalized: list[str] = []
+    for value in values:
+        item = value.strip()
+        if item and item not in normalized:
+            normalized.append(item)
+    return normalized
 
-    data = {
+
+def _safe_filename(name: str, index: int) -> str:
+    candidate = Path(name).name
+    if not candidate:
+        candidate = f"image_{index}.bin"
+    candidate = re.sub(r"[^A-Za-z0-9._-]", "_", candidate)
+    if not candidate:
+        candidate = f"image_{index}.bin"
+    return candidate
+
+
+def _prepare_job_payload(
+    job_id: str,
+    prompt: str,
+    agent: str,
+    model: str | None,
+    image_attachments: list[str],
+) -> dict:
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return {
         "id": job_id,
         "status": "running",
-        "prompt": req.prompt,
-        "agent": req.agent or "codex",
-        "model": req.model,
+        "prompt": prompt,
+        "agent": agent or "codex",
+        "model": model,
+        "image_attachments": image_attachments,
         "created_at": now,
         "pid": 0,
         "session": "",
         "updates": [],
         "summary": "",
     }
-    _write_job(job_file, data)
 
+
+def _spawn_job_worker(
+    job_id: str,
+    prompt: str,
+    agent: str,
+    model: str | None,
+    api_key: str | None,
+    api_key_env: str | None,
+) -> int:
     worker_path = BASE_DIR / "worker.py"
     env = os.environ.copy()
-    if req.api_key:
-        api_key_env = req.api_key_env or _infer_api_key_env(req.model)
-        if api_key_env:
-            env["LISTEN_API_KEY_ENV"] = api_key_env
-            env["LISTEN_API_KEY"] = req.api_key
+    if api_key:
+        inferred_env = api_key_env or _infer_api_key_env(model)
+        if inferred_env:
+            env["LISTEN_API_KEY_ENV"] = inferred_env
+            env["LISTEN_API_KEY"] = api_key
     proc = subprocess.Popen(
-        [sys.executable, str(worker_path), job_id, req.prompt, req.agent, req.model or ""],
+        [sys.executable, str(worker_path), job_id, prompt, agent, model or ""],
         cwd=str(BASE_DIR),
         env=env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
+    return proc.pid
 
-    data["pid"] = proc.pid
+
+async def _store_uploaded_images(job_id: str, image_files: list[UploadFile]) -> list[str]:
+    if not image_files:
+        return []
+    upload_dir = UPLOADS_DIR / job_id
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    saved_paths: list[str] = []
+    for index, image_file in enumerate(image_files, start=1):
+        if image_file.content_type and not image_file.content_type.lower().startswith("image/"):
+            raise HTTPException(status_code=400, detail=f"Invalid file type: {image_file.filename}")
+        safe_name = _safe_filename(image_file.filename or "", index)
+        target = upload_dir / safe_name
+        payload = await image_file.read()
+        target.write_bytes(payload)
+        saved_paths.append(str(target))
+    return saved_paths
+
+
+@app.post("/job")
+def create_job(req: JobRequest):
+    job_id = uuid4().hex[:8]
+    job_file = JOBS_DIR / f"{job_id}.yaml"
+    image_attachments = _normalize_image_attachments(req.image_attachments)
+    data = _prepare_job_payload(job_id, req.prompt, req.agent, req.model, image_attachments)
+    _write_job(job_file, data)
+    data["pid"] = _spawn_job_worker(job_id, req.prompt, req.agent, req.model, req.api_key, req.api_key_env)
+    _write_job(job_file, data)
+    return {"job_id": job_id, "status": "running"}
+
+
+@app.post("/job/upload")
+async def create_job_with_upload(
+    prompt: str = Form(...),
+    agent: str = Form("codex"),
+    model: str | None = Form(None),
+    timeout_seconds: int = Form(900),
+    api_key: str | None = Form(None),
+    api_key_env: str | None = Form(None),
+    image_attachments: list[str] | None = Form(None),
+    image_files: list[UploadFile] = File(default_factory=list),
+):
+    _ = timeout_seconds
+    job_id = uuid4().hex[:8]
+    job_file = JOBS_DIR / f"{job_id}.yaml"
+    uploaded_paths = await _store_uploaded_images(job_id, image_files)
+    attachments = _normalize_image_attachments((image_attachments or []) + uploaded_paths)
+    data = _prepare_job_payload(job_id, prompt, agent, model, attachments)
+    _write_job(job_file, data)
+    data["pid"] = _spawn_job_worker(job_id, prompt, agent, model, api_key, api_key_env)
     _write_job(job_file, data)
     return {"job_id": job_id, "status": "running"}
 
