@@ -33,7 +33,10 @@ High-level REST job server used by the Linux Agents stack on port `7600`.
 ```
 
 - `api_key` is injected only into the worker process.
-- `image_attachments` is appended to prompt context and passed to the selected agent.
+- `image_attachments` is passed to the selected agent.
+  - for `pi`, local files are sent as `@/absolute/path/file.ext` (real multimodal attachment)
+  - for `pi`, non-file entries (URL or missing path) are kept as prompt references
+  - for other agents, entries are appended to prompt context
 - if `api_key` is set and `api_key_env` is omitted, the server infers env name from model provider:
   - `openai/gpt-4.1` → `OPENAI_API_KEY`
   - `anthropic/claude-sonnet-4` → `ANTHROPIC_API_KEY`
@@ -51,6 +54,7 @@ Accepted form fields:
 - `image_files` (optional, repeatable image uploads)
 
 Uploaded files are persisted under `apps/listen/jobs/uploads/<job_id>/`.
+When `agent=pi`, uploaded files are attached as `@file` automatically.
 
 ## Run
 
@@ -88,6 +92,10 @@ curl -X POST http://127.0.0.1:7600/job \
       "https://example.com/diagram.png"
     ]
   }'
+
+# Note for PI multimodal:
+# - absolute local paths that exist on the listen host are attached as @file
+# - URL/missing paths are sent as text references in the prompt
 
 # 3) Create a Pi job with explicit API key env
 curl -X POST http://127.0.0.1:7600/job \

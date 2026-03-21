@@ -229,14 +229,37 @@ def _run_opencode(job_id: str, prompt: str, model: str, session_name: str) -> in
     return _wait_for_sentinel(session_name, token)
 
 
-def _run_pi(job_id: str, prompt: str, model: str, session_name: str, api_key_env: str | None = None, api_key_value: str | None = None) -> int:
+def _partition_pi_attachments(image_attachments: list[str]) -> tuple[list[str], list[str]]:
+    file_attachments: list[str] = []
+    reference_attachments: list[str] = []
+    for attachment in image_attachments:
+        candidate = Path(attachment)
+        if candidate.exists() and candidate.is_file():
+            file_attachments.append(str(candidate))
+        else:
+            reference_attachments.append(attachment)
+    return file_attachments, reference_attachments
+
+
+def _run_pi(
+    job_id: str,
+    prompt: str,
+    model: str,
+    session_name: str,
+    api_key_env: str | None = None,
+    api_key_value: str | None = None,
+    image_attachments: list[str] | None = None,
+) -> int:
     """Run job using pi-coding-agent (pi) CLI."""
     token = uuid.uuid4().hex[:8]
     model_base, thinking_level = _split_model_and_thinking(model)
 
+    image_attachments = image_attachments or []
+    file_attachments, reference_attachments = _partition_pi_attachments(image_attachments)
+    prompt_text = _build_prompt_with_images(prompt, reference_attachments)
+
     # Build pi command
     pi_bin = "/home/alyssonpi/.npm-global/bin/pi"
-    # Use single quotes for the whole prompt to avoid shell expansion issues
 
     _ensure_session(session_name, str(REPO_ROOT))
     if not api_key_env and model_base:
@@ -254,13 +277,18 @@ def _run_pi(job_id: str, prompt: str, model: str, session_name: str, api_key_env
     if api_key_env and api_key_value is not None:
         prefix = f"export {api_key_env}={shlex.quote(api_key_value)} && "
 
-    pi_cmd_str = prefix + f"{pi_bin} -p '{prompt}'"
+    pi_cmd_parts = [pi_bin]
 
     # Add model if specified
     if model_base:
-        pi_cmd_str += f" --model '{model_base}'"
+        pi_cmd_parts.extend(["--model", model_base])
     if thinking_level:
-        pi_cmd_str += f" --thinking {thinking_level}"
+        pi_cmd_parts.extend(["--thinking", thinking_level])
+    pi_cmd_parts.append("-p")
+    pi_cmd_parts.extend([f"@{path}" for path in file_attachments])
+    pi_cmd_parts.append(prompt_text)
+
+    pi_cmd_str = prefix + " ".join(shlex.quote(part) for part in pi_cmd_parts)
 
     pi_output_file = Path(f"{PI_OUTPUT_PREFIX}{job_id}.txt")
     wrapped_cmd = (
@@ -344,13 +372,23 @@ def main(
         data.setdefault("updates", []).append(f"Spawned {agent_display} worker with default model")
     if image_attachments:
         data.setdefault("updates", []).append(f"Attached {len(image_attachments)} image(s) to prompt context")
+    if agent == "pi" and image_attachments:
+        pi_file_attachments, pi_reference_attachments = _partition_pi_attachments(image_attachments)
+        if pi_file_attachments:
+            data.setdefault("updates", []).append(
+                f"PI received {len(pi_file_attachments)} file attachment(s) via @file"
+            )
+        if pi_reference_attachments:
+            data.setdefault("updates", []).append(
+                f"PI received {len(pi_reference_attachments)} non-file attachment reference(s) in prompt"
+            )
 
     _write_yaml(job_file, data)
 
     exit_code = 1
     try:
         if agent == "pi":
-            exit_code = runner(job_id, prompt_with_images, model, session_name, api_key_env, api_key_value)
+            exit_code = runner(job_id, prompt, model, session_name, api_key_env, api_key_value, image_attachments)
         else:
             exit_code = runner(job_id, prompt_with_images, model, session_name)
     except Exception as exc:
@@ -416,6 +454,19 @@ def main(
 
                     if blocks:
                         data["summary"] = '\n'.join(blocks[-1][-20:])[:4000]
+                    elif captured:
+                        raw_lines: list[str] = []
+                        for raw_line in captured.split('\n'):
+                            line = _sanitize_text(_strip_ansi(raw_line).rstrip())
+                            if not line:
+                                continue
+                            if _line_is_sensitive(line):
+                                continue
+                            if "API_KEY" in line:
+                                continue
+                            raw_lines.append(line)
+                        if raw_lines:
+                            data["summary"] = '\n'.join(raw_lines[-20:])[:4000]
                 elif agent in ["opencode", "openclaw"] and _session_exists(session_name):
                     # Capture tmux output for opencode/openclaw
                     captured = _extract_between_markers(_capture_pane(session_name))
