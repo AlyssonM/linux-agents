@@ -298,11 +298,11 @@ def _prepare_pi_file_attachments(
         return file_attachments, []
     import os
 
-    max_side_raw = (os.environ.get("LMSTUDIO_IMAGE_MAX_SIDE") or "1024").strip()
+    max_side_raw = (os.environ.get("LMSTUDIO_IMAGE_MAX_SIDE") or "768").strip()
     try:
         max_side = int(max_side_raw)
     except ValueError:
-        max_side = 1024
+        max_side = 768
     max_side = max(256, min(max_side, 2048))
     prepared: list[str] = []
     temp_files: list[Path] = []
