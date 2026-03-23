@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import base64
+import mimetypes
 import re
 import shlex
 import subprocess
@@ -9,6 +11,8 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 import yaml
 
@@ -357,6 +361,120 @@ def _resolve_provider_extension(provider_norm: str | None) -> str | None:
     return None
 
 
+def _encode_lmstudio_image_attachment(path: str) -> dict[str, object]:
+    image_path = Path(path)
+    mime_type = mimetypes.guess_type(image_path.name)[0] or "image/jpeg"
+    payload = base64.b64encode(image_path.read_bytes()).decode("ascii")
+    return {
+        "type": "image_url",
+        "image_url": {
+            "url": f"data:{mime_type};base64,{payload}",
+        },
+    }
+
+
+def _run_lmstudio_vision_direct(
+    job_id: str,
+    prompt: str,
+    model_base: str,
+    file_attachments: list[str],
+) -> int:
+    import os
+
+    base_url_raw = (os.environ.get("LMSTUDIO_BASE_URL") or "http://127.0.0.1:1234/v1").strip()
+    base_url = base_url_raw if base_url_raw.endswith("/v1") else f"{base_url_raw.rstrip('/')}/v1"
+    endpoint = f"{base_url}/chat/completions"
+    request_model = model_base.split("/", 1)[1] if model_base.startswith("lmstudio/") else model_base
+    api_key = os.environ.get("LMSTUDIO_API_KEY") or "dummy"
+    timeout_raw = (os.environ.get("LMSTUDIO_VISION_TIMEOUT_SECONDS") or "120").strip()
+    try:
+        timeout_seconds = max(30, int(timeout_raw))
+    except ValueError:
+        timeout_seconds = 120
+
+    user_content: list[dict[str, object]] = [{"type": "text", "text": prompt}]
+    for attachment in file_attachments:
+        candidate = Path(attachment)
+        if candidate.exists() and candidate.is_file():
+            user_content.append(_encode_lmstudio_image_attachment(str(candidate)))
+
+    body = {
+        "model": request_model,
+        "messages": [
+            {
+                "role": "system",
+                "content": "Return only the final answer requested by the user.",
+            },
+            {
+                "role": "user",
+                "content": user_content,
+            },
+        ],
+        "chat_template_kwargs": {
+            "enable_thinking": False,
+        },
+        "stream": True,
+        "stream_options": {
+            "include_usage": True,
+        },
+        "store": False,
+        "max_completion_tokens": 8192,
+        "tools": [],
+    }
+    request = Request(
+        endpoint,
+        data=json.dumps(body).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        },
+        method="POST",
+    )
+
+    output_path = Path(f"{PI_OUTPUT_PREFIX}{job_id}.txt")
+    try:
+        with urlopen(request, timeout=timeout_seconds) as response:
+            collected_parts: list[str] = []
+            for raw_line in response:
+                line = raw_line.decode("utf-8", errors="replace").strip()
+                if not line or not line.startswith("data:"):
+                    continue
+                data = line[5:].strip()
+                if data == "[DONE]":
+                    break
+                try:
+                    event = json.loads(data)
+                except json.JSONDecodeError:
+                    continue
+                for choice in event.get("choices") or []:
+                    delta = choice.get("delta") or {}
+                    content_piece = delta.get("content")
+                    if isinstance(content_piece, str):
+                        collected_parts.append(content_piece)
+                    elif isinstance(content_piece, list):
+                        for item in content_piece:
+                            if isinstance(item, dict) and item.get("type") == "text":
+                                collected_parts.append(str(item.get("text", "")))
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace").strip()
+        output_path.write_text(f"LM Studio HTTP error {exc.code}: {detail or exc.reason}", encoding="utf-8")
+        return 1
+    except URLError as exc:
+        output_path.write_text(f"LM Studio connection failed: {exc.reason}", encoding="utf-8")
+        return 1
+    except Exception as exc:
+        output_path.write_text(f"LM Studio vision request failed: {exc}", encoding="utf-8")
+        return 1
+
+    content = "".join(collected_parts).strip()
+    if content:
+        output_path.write_text(content, encoding="utf-8")
+        return 0
+
+    output_path.write_text("LM Studio returned no content.", encoding="utf-8")
+    return 1
+
+
 def _run_pi(
     job_id: str,
     prompt: str,
@@ -423,15 +541,23 @@ def _run_pi(
 
     pi_cmd_str = prefix + " ".join(shlex.quote(part) for part in pi_cmd_parts)
 
-    pi_output_file = Path(f"{PI_OUTPUT_PREFIX}{job_id}.txt")
-    wrapped_cmd = (
-        f'echo "{START_PREFIX}{token}" ; '
-        + pi_cmd_str
-        + f" > {shlex.quote(str(pi_output_file))} 2>&1 ; "
-        + f'echo "{SENTINEL_PREFIX}{token}:$?"'
-    )
-    _send_keys(session_name, wrapped_cmd)
     try:
+        if provider_norm == "LMSTUDIO" and file_attachments:
+            return _run_lmstudio_vision_direct(
+                job_id=job_id,
+                prompt=prompt_text,
+                model_base=model_base,
+                file_attachments=file_attachments,
+            )
+
+        pi_output_file = Path(f"{PI_OUTPUT_PREFIX}{job_id}.txt")
+        wrapped_cmd = (
+            f'echo "{START_PREFIX}{token}" ; '
+            + pi_cmd_str
+            + f" > {shlex.quote(str(pi_output_file))} 2>&1 ; "
+            + f'echo "{SENTINEL_PREFIX}{token}:$?"'
+        )
+        _send_keys(session_name, wrapped_cmd)
         return _wait_for_sentinel(session_name, token)
     finally:
         for temp_file in temp_image_files:
