@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import shlex
 import subprocess
@@ -78,8 +79,47 @@ def _strip_ansi(value: str) -> str:
     return _ANSI_ESCAPE_PATTERN.sub("", value)
 
 
-def _line_has_italic_ansi(value: str) -> bool:
-    return "\x1b[3m" in value or "\x1b[23m" in value
+def _score_pi_summary_block(lines: list[str]) -> tuple[int, int]:
+    joined = "\n".join(lines)
+    lowered = joined.lower()
+    score = 0
+    if "{" in joined and "}" in joined:
+        score += 4
+    if '"summary"' in joined:
+        score += 3
+    if any(token in joined for token in ['"confidence"', '"risk_score"', '"material_class"']):
+        score += 3
+    if "warning:" in lowered:
+        score -= 3
+    if "model" in lowered and "not found" in lowered:
+        score -= 4
+    return score, len(lines)
+
+
+def _extract_json_object_from_text(text: str) -> str | None:
+    stripped = text.strip()
+    if not stripped:
+        return None
+    fence_match = re.match(r"^```(?:json)?\s*(.*?)\s*```$", stripped, re.DOTALL | re.IGNORECASE)
+    if fence_match:
+        stripped = fence_match.group(1).strip()
+    try:
+        parsed = json.loads(stripped)
+        if isinstance(parsed, dict):
+            return json.dumps(parsed, ensure_ascii=False, separators=(",", ":"))
+    except json.JSONDecodeError:
+        pass
+    decoder = json.JSONDecoder()
+    for index, ch in enumerate(stripped):
+        if ch != "{":
+            continue
+        try:
+            parsed, _ = decoder.raw_decode(stripped[index:])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            return json.dumps(parsed, ensure_ascii=False, separators=(",", ":"))
+    return None
 
 
 def _tmux(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -241,6 +281,82 @@ def _partition_pi_attachments(image_attachments: list[str]) -> tuple[list[str], 
     return file_attachments, reference_attachments
 
 
+def _prepare_pi_file_attachments(
+    job_id: str,
+    provider_norm: str | None,
+    file_attachments: list[str],
+) -> tuple[list[str], list[Path]]:
+    if provider_norm != "LMSTUDIO" or not file_attachments:
+        return file_attachments, []
+    try:
+        from PIL import Image
+    except Exception:
+        return file_attachments, []
+    import os
+
+    max_side_raw = (os.environ.get("LMSTUDIO_IMAGE_MAX_SIDE") or "1024").strip()
+    try:
+        max_side = int(max_side_raw)
+    except ValueError:
+        max_side = 1024
+    max_side = max(256, min(max_side, 2048))
+    prepared: list[str] = []
+    temp_files: list[Path] = []
+    for index, attachment in enumerate(file_attachments, start=1):
+        source = Path(attachment)
+        if not source.exists() or not source.is_file():
+            prepared.append(attachment)
+            continue
+        try:
+            with Image.open(source) as image:
+                width, height = image.size
+                if max(width, height) <= max_side:
+                    prepared.append(attachment)
+                    continue
+                converted = image.convert("RGB")
+                converted.thumbnail((max_side, max_side))
+                target = Path(f"/tmp/listen-pi-image-{job_id}-{index}.jpg")
+                converted.save(target, format="JPEG", quality=85, optimize=True)
+                prepared.append(str(target))
+                temp_files.append(target)
+        except Exception:
+            prepared.append(attachment)
+    return prepared, temp_files
+
+
+def _infer_provider_norm(model_base: str) -> str | None:
+    if not model_base:
+        return None
+    provider = model_base.split("/", 1)[0].split(":", 1)[0].strip()
+    if not provider:
+        return None
+    return re.sub(r"[^A-Za-z0-9]", "_", provider).upper()
+
+
+def _resolve_provider_extension(provider_norm: str | None) -> str | None:
+    if not provider_norm:
+        return None
+    import os
+
+    specific_env = os.environ.get(f"{provider_norm}_EXTENSION_PATH")
+    if specific_env:
+        candidate = Path(specific_env).expanduser()
+        if candidate.exists() and candidate.is_file():
+            return str(candidate)
+
+    if provider_norm == "LMSTUDIO":
+        candidates = [
+            Path.home() / ".openclaw" / "workspace" / "rcc-agents-ifes" / "application" / "pi-extensions" / "lmstudio.ts",
+            Path.home() / "Github" / "rcc-agents-ifes" / "application" / "pi-extensions" / "lmstudio.ts",
+            REPO_ROOT / "application" / "pi-extensions" / "lmstudio.ts",
+            REPO_ROOT.parent / "rcc-agents-ifes" / "application" / "pi-extensions" / "lmstudio.ts",
+        ]
+        for candidate in candidates:
+            if candidate.exists() and candidate.is_file():
+                return str(candidate)
+    return None
+
+
 def _run_pi(
     job_id: str,
     prompt: str,
@@ -253,35 +369,52 @@ def _run_pi(
     """Run job using pi-coding-agent (pi) CLI."""
     token = uuid.uuid4().hex[:8]
     model_base, thinking_level = _split_model_and_thinking(model)
+    provider_norm = _infer_provider_norm(model_base)
 
     image_attachments = image_attachments or []
     file_attachments, reference_attachments = _partition_pi_attachments(image_attachments)
+    file_attachments, temp_image_files = _prepare_pi_file_attachments(
+        job_id=job_id,
+        provider_norm=provider_norm,
+        file_attachments=file_attachments,
+    )
     prompt_text = _build_prompt_with_images(prompt, reference_attachments)
 
     # Build pi command
     pi_bin = "/home/alyssonpi/.npm-global/bin/pi"
 
     _ensure_session(session_name, str(REPO_ROOT))
-    if not api_key_env and model_base:
-        provider = model_base.split("/", 1)[0].split(":", 1)[0].strip()
-        if provider:
-            provider_norm = re.sub(r"[^A-Za-z0-9]", "_", provider).upper()
-            api_key_env = f"{provider_norm}_API_KEY"
+    extension_path = _resolve_provider_extension(provider_norm)
+    if not api_key_env and provider_norm:
+        api_key_env = f"{provider_norm}_API_KEY"
+    base_url_env = f"{provider_norm}_BASE_URL" if provider_norm else None
 
     if api_key_env and api_key_value is None:
         import os
 
         api_key_value = os.environ.get(api_key_env)
+    base_url_value = None
+    if base_url_env:
+        import os
 
-    prefix = ""
+        base_url_value = os.environ.get(base_url_env)
+
+    prefix_parts: list[str] = []
     if api_key_env and api_key_value is not None:
-        prefix = f"export {api_key_env}={shlex.quote(api_key_value)} && "
+        prefix_parts.append(f"export {api_key_env}={shlex.quote(api_key_value)}")
+    if base_url_env and base_url_value:
+        prefix_parts.append(f"export {base_url_env}={shlex.quote(base_url_value)}")
+    prefix = f"{' && '.join(prefix_parts)} && " if prefix_parts else ""
 
     pi_cmd_parts = [pi_bin]
 
     # Add model if specified
+    if extension_path:
+        pi_cmd_parts.extend(["--extension", extension_path])
     if model_base:
         pi_cmd_parts.extend(["--model", model_base])
+    if provider_norm == "LMSTUDIO":
+        pi_cmd_parts.append("--no-tools")
     if thinking_level:
         pi_cmd_parts.extend(["--thinking", thinking_level])
     pi_cmd_parts.append("-p")
@@ -298,7 +431,11 @@ def _run_pi(
         + f'echo "{SENTINEL_PREFIX}{token}:$?"'
     )
     _send_keys(session_name, wrapped_cmd)
-    return _wait_for_sentinel(session_name, token)
+    try:
+        return _wait_for_sentinel(session_name, token)
+    finally:
+        for temp_file in temp_image_files:
+            temp_file.unlink(missing_ok=True)
 
 
 # Agent runners mapping
@@ -431,8 +568,6 @@ def main(
                                 blocks.append(current_block)
                                 current_block = []
                             continue
-                        if _line_has_italic_ansi(raw_line):
-                            continue
                         if _line_is_sensitive(line):
                             continue
                         if line.strip().startswith("export DISPLAY="):
@@ -452,9 +587,28 @@ def main(
                     if current_block:
                         blocks.append(current_block)
 
-                    if blocks:
-                        data["summary"] = '\n'.join(blocks[-1][-20:])[:4000]
-                    elif captured:
+                    best_json_summary = ""
+                    best_json_score: tuple[int, int] | None = None
+                    for block in blocks:
+                        candidate_json = _extract_json_object_from_text("\n".join(block))
+                        if not candidate_json:
+                            continue
+                        candidate_score = _score_pi_summary_block(block)
+                        if best_json_score is None or candidate_score > best_json_score:
+                            best_json_score = candidate_score
+                            best_json_summary = candidate_json
+
+                    if best_json_summary:
+                        data["summary"] = best_json_summary[:4000]
+                    else:
+                        candidate_json = _extract_json_object_from_text(captured) if captured else ""
+                        if candidate_json:
+                            data["summary"] = candidate_json[:4000]
+                            captured = ""
+                        elif blocks:
+                            selected_block = max(blocks, key=_score_pi_summary_block)
+                            data["summary"] = '\n'.join(selected_block[-20:])[:4000]
+                    if captured and not data.get("summary"):
                         raw_lines: list[str] = []
                         for raw_line in captured.split('\n'):
                             line = _sanitize_text(_strip_ansi(raw_line).rstrip())

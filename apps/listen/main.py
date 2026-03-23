@@ -32,6 +32,7 @@ class JobRequest(BaseModel):
     timeout_seconds: int = 900
     api_key: str | None = None
     api_key_env: str | None = None
+    lmstudio_base_url: str | None = None
     image_attachments: list[str] | None = None
 
 
@@ -104,13 +105,21 @@ def _spawn_job_worker(
     model: str | None,
     api_key: str | None,
     api_key_env: str | None,
+    lmstudio_base_url: str | None,
 ) -> int:
     worker_path = BASE_DIR / "worker.py"
     env = os.environ.copy()
+    for key in ("LMSTUDIO_BASE_URL", "LMSTUDIO_API_KEY", "LMSTUDIO_EXTENSION_PATH"):
+        value = os.environ.get(key)
+        if value:
+            env[key] = value
+    if lmstudio_base_url:
+        env["LMSTUDIO_BASE_URL"] = lmstudio_base_url
+    inferred_env = api_key_env or _infer_api_key_env(model)
+    if inferred_env:
+        env["LISTEN_API_KEY_ENV"] = inferred_env
     if api_key:
-        inferred_env = api_key_env or _infer_api_key_env(model)
         if inferred_env:
-            env["LISTEN_API_KEY_ENV"] = inferred_env
             env["LISTEN_API_KEY"] = api_key
     proc = subprocess.Popen(
         [sys.executable, str(worker_path), job_id, prompt, agent, model or ""],
@@ -146,7 +155,15 @@ def create_job(req: JobRequest):
     image_attachments = _normalize_image_attachments(req.image_attachments)
     data = _prepare_job_payload(job_id, req.prompt, req.agent, req.model, image_attachments)
     _write_job(job_file, data)
-    data["pid"] = _spawn_job_worker(job_id, req.prompt, req.agent, req.model, req.api_key, req.api_key_env)
+    data["pid"] = _spawn_job_worker(
+        job_id,
+        req.prompt,
+        req.agent,
+        req.model,
+        req.api_key,
+        req.api_key_env,
+        req.lmstudio_base_url,
+    )
     _write_job(job_file, data)
     return {"job_id": job_id, "status": "running"}
 
@@ -159,6 +176,7 @@ async def create_job_with_upload(
     timeout_seconds: int = Form(900),
     api_key: str | None = Form(None),
     api_key_env: str | None = Form(None),
+    lmstudio_base_url: str | None = Form(None),
     image_attachments: list[str] | None = Form(None),
     image_files: list[UploadFile] = File(default_factory=list),
 ):
@@ -169,7 +187,7 @@ async def create_job_with_upload(
     attachments = _normalize_image_attachments((image_attachments or []) + uploaded_paths)
     data = _prepare_job_payload(job_id, prompt, agent, model, attachments)
     _write_job(job_file, data)
-    data["pid"] = _spawn_job_worker(job_id, prompt, agent, model, api_key, api_key_env)
+    data["pid"] = _spawn_job_worker(job_id, prompt, agent, model, api_key, api_key_env, lmstudio_base_url)
     _write_job(job_file, data)
     return {"job_id": job_id, "status": "running"}
 
