@@ -302,7 +302,7 @@ def _run_opencode(
     provider_norm = _infer_provider_norm(model_base)
     file_attachments, reference_attachments = _partition_pi_attachments(image_attachments)
     prompt_text = _build_prompt_with_images(prompt, reference_attachments)
-    if provider_norm == "LMSTUDIO" and file_attachments:
+    if provider_norm == "LMSTUDIO":
         return _run_lmstudio_vision_direct(
             job_id=job_id,
             prompt=prompt_text,
@@ -324,8 +324,7 @@ def _run_opencode(
 
     # Add model selection if specified
     if model:
-        selected_model = model_base if provider_norm == "LMSTUDIO" else model
-        opencode_cmd.extend(["--model", selected_model])
+        opencode_cmd.extend(["--model", model])
     for attachment in file_attachments:
         opencode_cmd.extend(["--file", attachment])
 
@@ -837,8 +836,44 @@ def main(
                             raw_lines.append(line)
                         if raw_lines:
                             data["summary"] = '\n'.join(raw_lines[-20:])[:4000]
-                elif agent in ["opencode", "openclaw"] and _session_exists(session_name):
-                    # Capture tmux output for opencode/openclaw
+                elif agent == "opencode":
+                    captured = ""
+                    pi_output_file = Path(f"{PI_OUTPUT_PREFIX}{job_id}.txt")
+                    if pi_output_file.exists():
+                        captured = pi_output_file.read_text(encoding="utf-8", errors="replace")
+                    if not captured and _session_exists(session_name):
+                        captured = _extract_between_markers(_capture_pane(session_name))
+                    lines = []
+
+                    for line in captured.split('\n'):
+                        line = line.rstrip()
+                        # Skip empty lines
+                        if not line:
+                            continue
+                        if _line_is_sensitive(line):
+                            continue
+                        if line.strip().startswith("export DISPLAY="):
+                            continue
+                        if "API_KEY" in line:
+                            continue
+                        # Skip sentinel and its remnants
+                        if SENTINEL_PREFIX in line or ':$?' in line or ':$\'"' in line:
+                            continue
+                        # Skip command prompts
+                        if any(line.strip().startswith(prefix) for prefix in ['$', '>', 'alyssonpi@']):
+                            continue
+                        # Skip lines with binary paths or command prefixes
+                        if any(p in line for p in ['/bin/opencode', 'opencode run', '/bin/pi', 'pi -p']):
+                            continue
+                        lines.append(_sanitize_text(line))
+
+                    candidate_json = _extract_json_object_from_text('\n'.join(lines)) if lines else ""
+                    if candidate_json:
+                        data["summary"] = candidate_json[:4000]
+                    elif lines:
+                        data["summary"] = '\n'.join(lines[-20:])[:4000]
+                elif agent == "openclaw" and _session_exists(session_name):
+                    # Capture tmux output for openclaw
                     captured = _extract_between_markers(_capture_pane(session_name))
                     lines = []
 
