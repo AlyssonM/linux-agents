@@ -288,9 +288,18 @@ def _run_openclaw(job_id: str, prompt: str, model: str, session_name: str) -> in
     return _wait_for_sentinel(session_name, token)
 
 
-def _run_opencode(job_id: str, prompt: str, model: str, session_name: str) -> int:
+def _run_opencode(
+    job_id: str,
+    prompt: str,
+    model: str,
+    session_name: str,
+    image_attachments: list[str] | None = None,
+) -> int:
     """Run job using OpenCode CLI."""
     token = uuid.uuid4().hex[:8]
+    image_attachments = image_attachments or []
+    file_attachments, reference_attachments = _partition_pi_attachments(image_attachments)
+    prompt_text = _build_prompt_with_images(prompt, reference_attachments)
 
     # Build opencode command
     opencode_bin = Path.home() / ".opencode" / "bin" / "opencode"
@@ -301,15 +310,21 @@ def _run_opencode(job_id: str, prompt: str, model: str, session_name: str) -> in
     opencode_cmd = [
         str(opencode_bin),
         "run",
-        prompt,
+        prompt_text,
     ]
 
     # Add model selection if specified
     if model:
         opencode_cmd.extend(["--model", model])
+    for attachment in file_attachments:
+        opencode_cmd.extend(["--file", attachment])
 
     # Wrap with sentinel
-    wrapped_cmd = f'echo "{START_PREFIX}{token}" ; ' + ' '.join([str(c) for c in opencode_cmd]) + f' ; echo "{SENTINEL_PREFIX}{token}:$?"'
+    wrapped_cmd = (
+        f'echo "{START_PREFIX}{token}" ; '
+        + " ".join(shlex.quote(part) for part in opencode_cmd)
+        + f' ; echo "{SENTINEL_PREFIX}{token}:$?"'
+    )
 
     _ensure_session(session_name, str(REPO_ROOT))
     _send_keys(session_name, wrapped_cmd)
@@ -696,6 +711,18 @@ def main(
             data.setdefault("updates", []).append(
                 f"PI received {len(pi_reference_attachments)} non-file attachment reference(s) in prompt"
             )
+    if agent == "opencode" and image_attachments:
+        opencode_file_attachments, opencode_reference_attachments = _partition_pi_attachments(
+            image_attachments
+        )
+        if opencode_file_attachments:
+            data.setdefault("updates", []).append(
+                f"OpenCode received {len(opencode_file_attachments)} file attachment(s) via --file"
+            )
+        if opencode_reference_attachments:
+            data.setdefault("updates", []).append(
+                f"OpenCode received {len(opencode_reference_attachments)} non-file attachment reference(s) in prompt"
+            )
 
     _write_yaml(job_file, data)
 
@@ -703,6 +730,8 @@ def main(
     try:
         if agent == "pi":
             exit_code = runner(job_id, prompt, model, session_name, api_key_env, api_key_value, image_attachments)
+        elif agent == "opencode":
+            exit_code = runner(job_id, prompt, model, session_name, image_attachments)
         else:
             exit_code = runner(job_id, prompt_with_images, model, session_name)
     except Exception as exc:
