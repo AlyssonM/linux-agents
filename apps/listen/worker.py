@@ -298,8 +298,17 @@ def _run_opencode(
     """Run job using OpenCode CLI."""
     token = uuid.uuid4().hex[:8]
     image_attachments = image_attachments or []
+    model_base, _ = _split_model_and_thinking(model)
+    provider_norm = _infer_provider_norm(model_base)
     file_attachments, reference_attachments = _partition_pi_attachments(image_attachments)
     prompt_text = _build_prompt_with_images(prompt, reference_attachments)
+    if provider_norm == "LMSTUDIO" and file_attachments:
+        return _run_lmstudio_vision_direct(
+            job_id=job_id,
+            prompt=prompt_text,
+            model_base=model_base,
+            file_attachments=file_attachments,
+        )
 
     # Build opencode command
     opencode_bin = Path.home() / ".opencode" / "bin" / "opencode"
@@ -315,7 +324,8 @@ def _run_opencode(
 
     # Add model selection if specified
     if model:
-        opencode_cmd.extend(["--model", model])
+        selected_model = model_base if provider_norm == "LMSTUDIO" else model
+        opencode_cmd.extend(["--model", selected_model])
     for attachment in file_attachments:
         opencode_cmd.extend(["--file", attachment])
 
