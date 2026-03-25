@@ -36,6 +36,10 @@ _INLINE_SECRET_PATTERNS = [
 ]
 _SENSITIVE_LINE_HINTS = re.compile(r"(?i)\b(api[_-]?key|authorization|bearer|token|secretctl_password)\b")
 _ANSI_ESCAPE_PATTERN = re.compile(r"\x1b\[[0-9;]*m")
+_LMSTUDIO_FALLBACK_BASE_URLS = (
+    "http://192.168.0.18:1234/v1",
+    "http://100.93.136.48:1234/v1",
+)
 
 
 def _split_model_and_thinking(model: str) -> tuple[str, str | None]:
@@ -81,6 +85,45 @@ def _line_is_sensitive(line: str) -> bool:
 
 def _strip_ansi(value: str) -> str:
     return _ANSI_ESCAPE_PATTERN.sub("", value)
+
+
+def _normalize_lmstudio_base_url(raw: str) -> str:
+    cleaned = raw.strip()
+    if not cleaned:
+        return ""
+    return cleaned if cleaned.endswith("/v1") else f"{cleaned.rstrip('/')}/v1"
+
+
+def _candidate_lmstudio_base_urls(preferred: str | None = None) -> list[str]:
+    candidates: list[str] = []
+    for raw in [preferred, *_LMSTUDIO_FALLBACK_BASE_URLS]:
+        if not raw:
+            continue
+        normalized = _normalize_lmstudio_base_url(raw)
+        if normalized and normalized not in candidates:
+            candidates.append(normalized)
+    return candidates
+
+
+def _lmstudio_base_url_reachable(base_url: str, timeout_seconds: float = 3.0) -> bool:
+    try:
+        request = Request(
+            f"{base_url}/models",
+            headers={"Authorization": "Bearer dummy"},
+            method="GET",
+        )
+        with urlopen(request, timeout=timeout_seconds):
+            return True
+    except Exception:
+        return False
+
+
+def _resolve_lmstudio_base_url(preferred: str | None = None) -> str:
+    candidates = _candidate_lmstudio_base_urls(preferred)
+    for candidate in candidates:
+        if _lmstudio_base_url_reachable(candidate):
+            return candidate
+    return candidates[0] if candidates else "http://192.168.0.18:1234/v1"
 
 
 def _score_pi_summary_block(lines: list[str]) -> tuple[int, int]:
@@ -381,9 +424,6 @@ def _run_lmstudio_vision_direct(
 ) -> int:
     import os
 
-    base_url_raw = (os.environ.get("LMSTUDIO_BASE_URL") or "http://127.0.0.1:1234/v1").strip()
-    base_url = base_url_raw if base_url_raw.endswith("/v1") else f"{base_url_raw.rstrip('/')}/v1"
-    endpoint = f"{base_url}/chat/completions"
     request_model = model_base.split("/", 1)[1] if model_base.startswith("lmstudio/") else model_base
     api_key = os.environ.get("LMSTUDIO_API_KEY") or "dummy"
     timeout_raw = (os.environ.get("LMSTUDIO_VISION_TIMEOUT_SECONDS") or "120").strip()
@@ -421,57 +461,66 @@ def _run_lmstudio_vision_direct(
         "max_completion_tokens": 8192,
         "tools": [],
     }
-    request = Request(
-        endpoint,
-        data=json.dumps(body).encode("utf-8"),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        },
-        method="POST",
-    )
-
     output_path = Path(f"{PI_OUTPUT_PREFIX}{job_id}.txt")
-    try:
-        with urlopen(request, timeout=timeout_seconds) as response:
-            collected_parts: list[str] = []
-            for raw_line in response:
-                line = raw_line.decode("utf-8", errors="replace").strip()
-                if not line or not line.startswith("data:"):
-                    continue
-                data = line[5:].strip()
-                if data == "[DONE]":
-                    break
-                try:
-                    event = json.loads(data)
-                except json.JSONDecodeError:
-                    continue
-                for choice in event.get("choices") or []:
-                    delta = choice.get("delta") or {}
-                    content_piece = delta.get("content")
-                    if isinstance(content_piece, str):
-                        collected_parts.append(content_piece)
-                    elif isinstance(content_piece, list):
-                        for item in content_piece:
-                            if isinstance(item, dict) and item.get("type") == "text":
-                                collected_parts.append(str(item.get("text", "")))
-    except HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace").strip()
-        output_path.write_text(f"LM Studio HTTP error {exc.code}: {detail or exc.reason}", encoding="utf-8")
-        return 1
-    except URLError as exc:
-        output_path.write_text(f"LM Studio connection failed: {exc.reason}", encoding="utf-8")
-        return 1
-    except Exception as exc:
-        output_path.write_text(f"LM Studio vision request failed: {exc}", encoding="utf-8")
+    connection_errors: list[str] = []
+    base_url_candidates = _candidate_lmstudio_base_urls(os.environ.get("LMSTUDIO_BASE_URL"))
+    for base_url in base_url_candidates:
+        endpoint = f"{base_url}/chat/completions"
+        request = Request(
+            endpoint,
+            data=json.dumps(body).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}",
+            },
+            method="POST",
+        )
+        try:
+            with urlopen(request, timeout=timeout_seconds) as response:
+                collected_parts: list[str] = []
+                for raw_line in response:
+                    line = raw_line.decode("utf-8", errors="replace").strip()
+                    if not line or not line.startswith("data:"):
+                        continue
+                    data = line[5:].strip()
+                    if data == "[DONE]":
+                        break
+                    try:
+                        event = json.loads(data)
+                    except json.JSONDecodeError:
+                        continue
+                    for choice in event.get("choices") or []:
+                        delta = choice.get("delta") or {}
+                        content_piece = delta.get("content")
+                        if isinstance(content_piece, str):
+                            collected_parts.append(content_piece)
+                        elif isinstance(content_piece, list):
+                            for item in content_piece:
+                                if isinstance(item, dict) and item.get("type") == "text":
+                                    collected_parts.append(str(item.get("text", "")))
+            content = "".join(collected_parts).strip()
+            if content:
+                os.environ["LMSTUDIO_BASE_URL"] = base_url
+                output_path.write_text(content, encoding="utf-8")
+                return 0
+            output_path.write_text("LM Studio returned no content.", encoding="utf-8")
+            return 1
+        except HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace").strip()
+            output_path.write_text(f"LM Studio HTTP error {exc.code}: {detail or exc.reason}", encoding="utf-8")
+            return 1
+        except URLError as exc:
+            connection_errors.append(f"{base_url}: {exc.reason}")
+        except Exception as exc:
+            connection_errors.append(f"{base_url}: {exc}")
+    if connection_errors:
+        output_path.write_text(
+            "LM Studio connection failed: " + " | ".join(connection_errors),
+            encoding="utf-8",
+        )
         return 1
 
-    content = "".join(collected_parts).strip()
-    if content:
-        output_path.write_text(content, encoding="utf-8")
-        return 0
-
-    output_path.write_text("LM Studio returned no content.", encoding="utf-8")
+    output_path.write_text("LM Studio connection failed: no candidate base URL available.", encoding="utf-8")
     return 1
 
 
@@ -516,6 +565,8 @@ def _run_pi(
         import os
 
         base_url_value = os.environ.get(base_url_env)
+    if provider_norm == "LMSTUDIO":
+        base_url_value = _resolve_lmstudio_base_url(base_url_value)
 
     prefix_parts: list[str] = []
     if api_key_env and api_key_value is not None:
