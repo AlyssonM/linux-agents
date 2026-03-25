@@ -45,3 +45,6 @@ apps/**/jobs/*.yaml
 apps/**/jobs/archived/*.yaml
 !apps/**/jobs/.gitkeep
 !apps/**/jobs/archived/.gitkeep
+
+uploads/**
+!uploads/.gitkeep
