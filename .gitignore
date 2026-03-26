@@ -41,10 +41,7 @@ rpi-gui/artifacts/**
 !rpi-gui/artifacts/.gitkeep
 
 # Job runtime state
-apps/**/jobs/*.yaml
-apps/**/jobs/archived/*.yaml
-!apps/**/jobs/.gitkeep
-!apps/**/jobs/archived/.gitkeep
+apps/**/jobs/**
+apps/**/uploads/**
 
 uploads/**
-!uploads/.gitkeep
